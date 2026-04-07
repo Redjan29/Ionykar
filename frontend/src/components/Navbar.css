@@ -1,15 +1,16 @@
 .navbar {
   height: 70px;
   padding: 0 24px;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  background: rgba(14, 14, 14, 0.72);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: sticky;
   top: 0;
   z-index: 10;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
 }
 
 .navbar-left {
@@ -17,6 +18,33 @@
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+}
+
+.navbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 16px;
+  flex: 1;
+  justify-content: center;
+}
+
+.navbar-nav-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  text-decoration: none;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  white-space: nowrap;
+}
+
+.navbar-nav-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 .navbar-logo-link {
@@ -35,9 +63,10 @@
 
 .navbar-logo-text {
   font-size: 20px;
-  font-weight: 800;
+  font-family: var(--ik-font-title);
+  font-weight: 700;
   letter-spacing: 0.2px;
-  color: #111827;
+  color: var(--ik-white);
   margin-left: 10px;
 }
 
@@ -48,11 +77,31 @@
   position: relative;
 }
 
-.locale-trigger {
-  border: 1px solid #d1d5db;
+.navbar-reserve {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
   border-radius: 999px;
-  background: #f9fafb;
-  color: #111827;
+  background: var(--ik-yellow);
+  color: var(--ik-black);
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 12px 26px rgba(252, 190, 12, 0.2);
+  transition: filter 0.18s ease, transform 0.18s ease;
+  white-space: nowrap;
+}
+
+.navbar-reserve:hover {
+  filter: brightness(0.96);
+  transform: translateY(-1px);
+}
+
+.locale-trigger {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ik-white);
   padding: 7px 12px;
   font-size: 13px;
   font-weight: 600;
@@ -64,8 +113,8 @@
 }
 
 .locale-trigger:hover {
-  background: #ffffff;
-  border-color: #9ca3af;
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(252, 190, 12, 0.35);
 }
 
 .locale-trigger-separator {
@@ -181,7 +230,7 @@
 .navbar-link {
   font-size: 14px;
   text-decoration: none;
-  color: #111827;
+  color: var(--ik-white);
   padding: 6px 10px;
   cursor: pointer;
 }
@@ -214,8 +263,8 @@
   border-radius: 999px;
   border: none;
   padding: 8px 16px;
-  background: #111827;
-  color: #ffffff;
+  background: var(--ik-yellow);
+  color: var(--ik-black);
   font-size: 14px;
   text-decoration: none;
   cursor: pointer;
@@ -223,7 +272,7 @@
 }
 
 .navbar-button:hover {
-  background: #374151;
+  filter: brightness(0.96);
 }
 
 .profile-menu-wrapper {
@@ -231,8 +280,8 @@
 }
 
 .profile-menu-trigger {
-  border: 1px solid #e5e7eb;
-  background: white;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 999px;
   padding: 6px 10px;
   display: inline-flex;
@@ -240,7 +289,7 @@
   gap: 8px;
   cursor: pointer;
   font: inherit;
-  color: #111827;
+  color: var(--ik-white);
   transition: all 0.2s ease;
 }
 
@@ -279,8 +328,8 @@
   right: 0;
   top: calc(100% + 4px);
   width: 240px;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: rgba(14, 14, 14, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
   padding: 8px;
@@ -314,7 +363,7 @@
   border: none;
   background: transparent;
   text-decoration: none;
-  color: #111827;
+  color: var(--ik-white);
   font-size: 14px;
   font-weight: 500;
   text-align: left;
@@ -325,7 +374,7 @@
 }
 
 .profile-dropdown-item:hover {
-  background: #f3f4f6;
+  background: rgba(255, 255, 255, 0.06);
   transform: translateX(3px);
 }
 
@@ -347,6 +396,10 @@
   .navbar {
     padding: 0 16px;
     height: 60px;
+  }
+
+  .navbar-nav {
+    display: none;
   }
 
   .navbar-logo-img {

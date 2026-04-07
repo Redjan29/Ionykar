@@ -1,0 +1,52 @@
+:root {
+  /* IONYKAR Brandbook */
+  --ik-black: #0e0e0e;
+  --ik-white: #ffffff;
+  --ik-yellow: #fcbe0c;
+
+  /* UI neutrals */
+  --ik-bg: #0b0b0b;
+  --ik-surface: #121212;
+  --ik-surface-2: #171717;
+  --ik-border: rgba(255, 255, 255, 0.12);
+  --ik-muted: rgba(255, 255, 255, 0.72);
+  --ik-muted-2: rgba(255, 255, 255, 0.56);
+
+  /* Shadows */
+  --ik-shadow-lg: 0 18px 60px rgba(0, 0, 0, 0.5);
+  --ik-shadow-md: 0 12px 30px rgba(0, 0, 0, 0.35);
+
+  /* Radii */
+  --ik-radius-lg: 20px;
+  --ik-radius-md: 14px;
+  --ik-radius-sm: 10px;
+
+  /* Typography (Brandbook: Monda + Montserrat) */
+  --ik-font-title: "Monda", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --ik-font-body: "Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--ik-font-body);
+  background: var(--ik-bg);
+  color: var(--ik-white);
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: rgba(252, 190, 12, 0.35);
+}
+

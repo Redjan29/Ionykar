@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getProfile, updateProfile } from "../api/users";
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer.jsx";
 import { useToast } from "../hooks/useToast";
 import Toast from "../components/Toast";
 import "./Profile.css";
@@ -174,6 +175,7 @@ export default function Profile() {
         <div className="profile-container">
           <p>Chargement...</p>
         </div>
+        <Footer />
       </>
     );
   }
@@ -441,6 +443,7 @@ export default function Profile() {
           </form>
         </div>
       </div>
+      <Footer />
     </>
   );
 }

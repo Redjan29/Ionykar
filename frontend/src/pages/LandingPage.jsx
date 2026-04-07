@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { fetchCars } from "../api/cars";
 import CarCard from "../components/CarCard";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+import BackToTop from "../components/BackToTop.jsx";
 import "./LandingPage.css";
 
 export default function LandingPage() {
@@ -660,6 +662,8 @@ export default function LandingPage() {
         </div>
       </section>
       </div>
+      <BackToTop />
+      <Footer />
     </>
   );
 }

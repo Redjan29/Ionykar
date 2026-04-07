@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
+import Footer from "../components/Footer.jsx";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import "./Auth.css";
@@ -118,6 +119,7 @@ export default function Login() {
           </p>
         </div>
       </div>
+      <Footer />
     </>
   );
 }

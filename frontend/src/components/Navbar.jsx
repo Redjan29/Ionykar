@@ -1,5 +1,5 @@
 // src/components/Navbar.jsx
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./Navbar.css";
 import { useAppContext } from "../context/AppContext.jsx";
@@ -18,6 +18,11 @@ export default function Navbar() {
 
   const languageLabel = language === "fr" ? "Français" : "English";
   const currencyLabel = currency === "EUR" ? "Euro (€)" : "Dollar ($)";
+
+  const accountTarget = useMemo(() => {
+    if (isAuthenticated) return "/profile";
+    return "/login";
+  }, [isAuthenticated]);
 
   const handleLogout = () => {
     logout();
@@ -41,8 +46,30 @@ export default function Navbar() {
         </Link>
       </div>
 
+      <nav className="navbar-nav" aria-label="Navigation principale">
+        <Link to="/" className="navbar-nav-link">
+          {language === "fr" ? "Accueil" : "Home"}
+        </Link>
+        <Link to="/cars" className="navbar-nav-link">
+          {language === "fr" ? "Nos Véhicules" : "Vehicles"}
+        </Link>
+        <Link to="/stations" className="navbar-nav-link">
+          {language === "fr" ? "Nos Stations" : "Stations"}
+        </Link>
+        <Link to="/cgl" className="navbar-nav-link">
+          {language === "fr" ? "Conditions de location" : "Rental terms"}
+        </Link>
+        <Link to={accountTarget} className="navbar-nav-link">
+          {language === "fr" ? "Mon Compte" : "My account"}
+        </Link>
+      </nav>
+
       {/* Droite : langue, monnaie, connexion, inscription */}
       <div className="navbar-right">
+        <Link to="/cars" className="navbar-reserve">
+          {language === "fr" ? "Réserver" : "Book"}
+        </Link>
+
         <button
           type="button"
           className="locale-trigger"

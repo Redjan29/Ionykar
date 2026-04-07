@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import CarCard from "../components/CarCard";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 import { fetchCars } from "../api/cars";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -79,7 +80,7 @@ function CarsPage() {
           flexWrap: "wrap",
           gap: "24px",
           padding: "40px",
-          background: "#e5e7eb",
+          background: "transparent",
           minHeight: "100vh",
         }}
       >
@@ -96,6 +97,7 @@ function CarsPage() {
           />
         ))}
       </div>
+      <Footer />
     </>
   );
 }

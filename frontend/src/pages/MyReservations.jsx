@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer.jsx";
 import { useAuth } from "../context/AuthContext";
 import { cancelMyReservation, getMyReservations } from "../api/reservations";
 import "./MyReservations.css";
@@ -117,6 +118,7 @@ export default function MyReservations() {
           </table>
         )}
       </div>
+      <Footer />
     </>
   );
 }

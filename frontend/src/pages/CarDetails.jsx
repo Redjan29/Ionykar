@@ -4,6 +4,7 @@ import { useParams, Link, useSearchParams } from "react-router-dom";
 import { fetchCarById } from "../api/cars";
 import BookingForm from "../components/BookingForm";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer.jsx";
 import { useAppContext } from "../context/AppContext.jsx";
 import { FALLBACK_CAR_IMAGE, resolveImageUrl } from "../utils/imageUrl.js";
 import "./CarDetails.css";
@@ -203,6 +204,7 @@ export default function CarDetails() {
           </div>
         )}
       </div>
+      <Footer />
     </>
   );
 }
