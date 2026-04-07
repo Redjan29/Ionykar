@@ -1,0 +1,17 @@
+# robots.txt pour IonyKar - Location de Voiture
+# https://www.ionykar.fr/robots.txt
+
+User-agent: *
+Allow: /
+Allow: /cars
+Allow: /cars/*
+
+Disallow: /admin
+Disallow: /my-reservations
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://www.ionykar.fr/sitemap.xml
+
+# Crawl-delay pour ne pas surcharger le serveur
+Crawl-delay: 1

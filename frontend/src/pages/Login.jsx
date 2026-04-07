@@ -1,0 +1,123 @@
+// src/pages/Login.jsx
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import Navbar from "../components/Navbar.jsx";
+import { useAppContext } from "../context/AppContext.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
+import "./Auth.css";
+
+export default function Login() {
+  const { language } = useAppContext();
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+    setError("");
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const loggedUser = await login(formData.email, formData.password);
+      navigate(loggedUser?.isAdmin ? "/admin" : "/");
+    } catch (err) {
+      setError(
+        err.message ||
+          (language === "fr"
+            ? "Email ou mot de passe incorrect"
+            : "Invalid email or password")
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <Navbar />
+      <div className="auth-page">
+        <div className="auth-card">
+          <h1>{language === "fr" ? "Connexion" : "Log in"}</h1>
+          
+          {error && <div className="auth-error">{error}</div>}
+
+          <form onSubmit={handleSubmit} className="auth-form">
+            <label>
+              Email
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                disabled={loading}
+              />
+            </label>
+            <label>
+              {language === "fr" ? "Mot de passe" : "Password"}
+              <div className="password-input-wrapper">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={
+                    showPassword
+                      ? language === "fr"
+                        ? "Masquer le mot de passe"
+                        : "Hide password"
+                      : language === "fr"
+                      ? "Afficher le mot de passe"
+                      : "Show password"
+                  }
+                >
+                  {showPassword ? "🙈" : "👁"}
+                </button>
+              </div>
+            </label>
+            <button type="submit" className="auth-button" disabled={loading}>
+              {loading
+                ? language === "fr"
+                  ? "Connexion..."
+                  : "Logging in..."
+                : language === "fr"
+                ? "Se connecter"
+                : "Log in"}
+            </button>
+          </form>
+
+          <p className="auth-footer">
+            {language === "fr"
+              ? "Pas encore de compte ? "
+              : "Don't have an account? "}
+            <Link to="/signup">
+              {language === "fr" ? "Créer un compte" : "Sign up"}
+            </Link>
+          </p>
+        </div>
+      </div>
+    </>
+  );
+}

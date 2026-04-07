@@ -1,0 +1,63 @@
+export const seedFleet = [
+  {
+    brand: "Peugeot",
+    model: "3008",
+    category: "SUV",
+    year: 2023,
+    licensePlate: "ION-3008",
+    pricePerDay: 75,
+    seats: 5,
+    luggage: 3,
+    transmission: "Auto",
+    fuel: "Essence",
+    imageUrl: "/cars/3008.jpg",
+    description:
+      "SUV polyvalent et confortable, idéal pour la ville comme pour les longs trajets.",
+  },
+  {
+    brand: "Renault",
+    model: "Arkana",
+    category: "SUV",
+    year: 2023,
+    licensePlate: "ION-ARK",
+    pricePerDay: 70,
+    seats: 5,
+    luggage: 3,
+    transmission: "Auto",
+    fuel: "Hybride",
+    imageUrl: "/cars/Arkana.jpg",
+    description:
+      "SUV coupé moderne, agréable au quotidien et économique en carburant.",
+  },
+  {
+    brand: "Volkswagen",
+    model: "Golf",
+    category: "BERLINE",
+    year: 2022,
+    licensePlate: "ION-GOLF",
+    pricePerDay: 60,
+    seats: 5,
+    luggage: 3,
+    transmission: "Auto",
+    fuel: "Essence",
+    imageUrl: "/cars/Golf.jpg",
+    description:
+      "Berline compacte fiable et confortable, parfaite pour tous types de trajets.",
+  },
+  {
+    brand: "BMW",
+    model: "Série 1",
+    category: "LUXE",
+    year: 2022,
+    licensePlate: "ION-BM1",
+    pricePerDay: 85,
+    seats: 5,
+    luggage: 2,
+    transmission: "Auto",
+    fuel: "Essence",
+    imageUrl: "/cars/série_1.jpg",
+    description:
+      "Compact premium, finition haut de gamme et conduite dynamique.",
+  },
+];
+
