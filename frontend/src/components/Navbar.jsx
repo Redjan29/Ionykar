@@ -34,15 +34,16 @@ export default function Navbar() {
       {/* Logo */}
       <div className="navbar-left">
         <Link to={logoTarget} className="navbar-logo-link">
-          <img
-            src="/logo.png"
-            alt="IonyKar"
-            className="navbar-logo-img"
-            onError={(event) => {
-              event.currentTarget.style.display = "none";
-            }}
-          />
-          <span className="navbar-logo-text">IonyKar</span>
+          <span className="navbar-logo-mark">
+            <img
+              src="/logo.png"
+              alt="IonyKar"
+              className="navbar-logo-img"
+              onError={(event) => {
+                event.currentTarget.style.display = "none";
+              }}
+            />
+          </span>
         </Link>
       </div>
 
@@ -55,12 +56,6 @@ export default function Navbar() {
         </Link>
         <Link to="/stations" className="navbar-nav-link">
           {language === "fr" ? "Nos Stations" : "Stations"}
-        </Link>
-        <Link to="/cgl" className="navbar-nav-link">
-          {language === "fr" ? "Conditions de location" : "Rental terms"}
-        </Link>
-        <Link to={accountTarget} className="navbar-nav-link">
-          {language === "fr" ? "Mon Compte" : "My account"}
         </Link>
       </nav>
 

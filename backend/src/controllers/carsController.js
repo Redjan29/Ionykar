@@ -106,13 +106,10 @@ export async function getAvailableCars(req, res, next) {
 export async function getCarById(req, res, next) {
   try {
     const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      const err = new Error("Invalid car id");
-      err.status = 400;
-      throw err;
-    }
-
-    const car = await Car.findById(id);
+    const isObjectId = mongoose.Types.ObjectId.isValid(id);
+    const car = isObjectId
+      ? await Car.findById(id)
+      : await Car.findOne({ slug: String(id).trim().toLowerCase() });
     if (!car) {
       const err = new Error("Car not found");
       err.status = 404;

@@ -2,6 +2,7 @@ export const seedFleet = [
   {
     brand: "Peugeot",
     model: "3008",
+    slug: "peugeot-3008",
     category: "SUV",
     year: 2023,
     licensePlate: "ION-3008",
@@ -17,6 +18,7 @@ export const seedFleet = [
   {
     brand: "Renault",
     model: "Arkana",
+    slug: "renault-arkana",
     category: "SUV",
     year: 2023,
     licensePlate: "ION-ARK",
@@ -32,6 +34,7 @@ export const seedFleet = [
   {
     brand: "Volkswagen",
     model: "Golf",
+    slug: "volkswagen-golf",
     category: "BERLINE",
     year: 2022,
     licensePlate: "ION-GOLF",
@@ -47,6 +50,7 @@ export const seedFleet = [
   {
     brand: "BMW",
     model: "Série 1",
+    slug: "bmw-serie-1",
     category: "LUXE",
     year: 2022,
     licensePlate: "ION-BM1",

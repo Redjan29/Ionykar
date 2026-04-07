@@ -8,6 +8,7 @@ import { FALLBACK_CAR_IMAGE, resolveImageUrl } from "../utils/imageUrl.js";
 function CarCard({
   _id,
   id,
+  slug,
   brand,
   model,
   category,
@@ -26,8 +27,8 @@ function CarCard({
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
   
-  // Utiliser _id en priorité (vient de MongoDB), sinon id
-  const carId = _id || id;
+  // Prefer SEO-friendly slugs, fallback to MongoDB id.
+  const carId = slug || _id || id;
   const galleryImages = useMemo(() => {
     const values = [];
     if (imageUrl && typeof imageUrl === "string" && imageUrl.trim()) {

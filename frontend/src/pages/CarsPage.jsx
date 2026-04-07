@@ -31,8 +31,8 @@ function CarsPage() {
     })
       .then((data) => {
         if (isMounted) {
-          // Strict category filtering (CITADINE, BERLINE, BREAK)
-          const allowedCategories = ["CITADINE", "BERLINE", "BREAK"];
+          // Category filtering (align with backend enums)
+          const allowedCategories = ["CITADINE", "BERLINE", "BREAK", "SUV", "LUXE"];
           const categoryParam = searchParams.get("category");
           let filtered = data;
           if (categoryParam) {
