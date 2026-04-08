@@ -1,0 +1,30 @@
+.cars-page {
+  min-height: 100vh;
+  padding: 44px 20px 20px;
+}
+
+.cars-page-grid {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  align-items: start;
+}
+
+.cars-page-state {
+  max-width: 1080px;
+  margin: 0 auto;
+  color: var(--ik-muted);
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+@media (max-width: 900px) {
+  .cars-page-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

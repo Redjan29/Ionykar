@@ -1,5 +1,5 @@
 // src/pages/LandingPage.jsx
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { fetchCars } from "../api/cars";
 import CarCard from "../components/CarCard";
@@ -9,7 +9,6 @@ import BackToTop from "../components/BackToTop.jsx";
 import "./LandingPage.css";
 
 export default function LandingPage() {
-  const navigate = useNavigate();
   const [featuredCars, setFeaturedCars] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -375,6 +374,78 @@ export default function LandingPage() {
       {/* Notre flotte */}
       {/* (sections "Notre flotte" et "Témoignages" retirées à ta demande) */}
 
+      {/* Nos véhicules (aperçu) */}
+      <section className="vehicles-preview-section">
+        <div className="container">
+          <div className="section-header-row">
+            <div>
+              <h2>Nos véhicules</h2>
+              <p className="section-intro">
+                Un aperçu de véhicules disponibles. Consultez chaque fiche pour voir les
+                caractéristiques et réserver.
+              </p>
+            </div>
+            <Link to={buildUrlWithDates("/cars")} className="btn-primary btn-primary-compact">
+              Voir tous les véhicules
+            </Link>
+          </div>
+
+          {!loading && featuredCars.length > 0 ? (
+            <div className="vehicles-preview-grid">
+              {featuredCars.slice(0, 4).map((car) => (
+                <CarCard key={car._id || car.slug} {...car} searchParams={searchParams} />
+              ))}
+            </div>
+          ) : (
+            <div className="vehicles-preview-empty">
+              {loading ? "Chargement..." : "Aucun véhicule à afficher pour le moment."}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Nos stations (carte + liste) */}
+      <section className="stations-home-section">
+        <div className="container">
+          <div className="section-header-row">
+            <div>
+              <h2>Nos stations</h2>
+              <p className="section-intro">
+                Retrait et retour depuis nos stations à Paris 12e (Bastille).
+              </p>
+            </div>
+            <Link to="/stations" className="btn-secondary btn-secondary-compact">
+              Voir les stations
+            </Link>
+          </div>
+
+          <div className="stations-grid">
+            <div className="stations-map">
+              <iframe
+                title="Carte des stations IonyKar"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                src="https://www.google.com/maps?q=Bastille%20Paris%2012&output=embed"
+              />
+            </div>
+
+            <div className="stations-list">
+              <div className="station-card">
+                <div className="station-card-title">Paris 12e — Bastille</div>
+                <div className="station-card-meta">Station principale</div>
+                <div className="station-card-line">Accès facile, informations envoyées avant départ.</div>
+              </div>
+              <div className="station-card station-card-muted">
+                <div className="station-card-title">Autres stations</div>
+                <div className="station-card-line">
+                  À venir: ajout des stations d’autopartage sur la carte et sur la page dédiée.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ SEO-rich */}
       <section className="faq-section">
         <div className="container">
@@ -430,6 +501,30 @@ export default function LandingPage() {
                 supplémentaires.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Avis clients */}
+      <section className="reviews-section">
+        <div className="container">
+          <h2>Avis clients</h2>
+          <p className="section-intro">
+            Nous n’affichons pas de faux avis. Quand tu voudras, on pourra connecter des avis
+            réels (Google Business Profile) ou un module dédié.
+          </p>
+          <div className="reviews-cta-row">
+            <a
+              className="btn-primary btn-primary-compact"
+              href="https://www.google.com/search?q=IonyKar+Bastille+avis"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Voir les avis Google
+            </a>
+            <Link className="btn-secondary btn-secondary-compact" to="/stations">
+              Nos stations
+            </Link>
           </div>
         </div>
       </section>

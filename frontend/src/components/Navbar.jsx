@@ -47,17 +47,6 @@ export default function Navbar() {
         </Link>
       </div>
 
-      <nav className="navbar-nav" aria-label="Navigation principale">
-        <Link to="/" className="navbar-nav-link">
-          {language === "fr" ? "Accueil" : "Home"}
-        </Link>
-        <Link to="/cars" className="navbar-nav-link">
-          {language === "fr" ? "Nos Véhicules" : "Vehicles"}
-        </Link>
-        <Link to="/stations" className="navbar-nav-link">
-          {language === "fr" ? "Nos Stations" : "Stations"}
-        </Link>
-      </nav>
 
       {/* Droite : langue, monnaie, connexion, inscription */}
       <div className="navbar-right">

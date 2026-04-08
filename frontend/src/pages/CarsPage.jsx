@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { fetchCars } from "../api/cars";
 import { useAuth } from "../context/AuthContext.jsx";
+import "./CarsPage.css";
 
 function CarsPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -72,30 +73,23 @@ function CarsPage() {
   return (
     <>
       <Navbar />
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "flex-start",
-          flexWrap: "wrap",
-          gap: "24px",
-          padding: "40px",
-          background: "transparent",
-          minHeight: "100vh",
-        }}
-      >
-        {loading && <p>Chargement...</p>}
-        {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
+      <div className="cars-page">
+        {loading && <div className="cars-page-state">Chargement...</div>}
+        {error && <div className="cars-page-state" style={{ color: "#ffb4b4" }}>{error}</div>}
         {!loading && !error && cars.length === 0 && (
-          <p>Aucune voiture disponible.</p>
+          <div className="cars-page-state">Aucune voiture disponible.</div>
         )}
-        {cars.map((car) => (
-          <CarCard 
-            key={car._id || car.id} 
-            {...car} 
-            searchParams={datesFromUrl.startDate ? datesFromUrl : null}
-          />
-        ))}
+        {!loading && !error && cars.length > 0 && (
+          <div className="cars-page-grid">
+            {cars.map((car) => (
+              <CarCard
+                key={car._id || car.slug || car.id}
+                {...car}
+                searchParams={datesFromUrl.startDate ? datesFromUrl : null}
+              />
+            ))}
+          </div>
+        )}
       </div>
       <Footer />
     </>
