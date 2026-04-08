@@ -96,6 +96,22 @@
   margin-bottom: 10px;
 }
 
+.booking-included-km {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px dashed #d1d5db;
+  background: #f9fafb;
+  color: #111827;
+  font-size: 14px;
+}
+
+.booking-included-km-sub {
+  color: #6b7280;
+  font-size: 12px;
+  margin-left: 6px;
+}
+
 .booking-extras-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

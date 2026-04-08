@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { fetchCars } from "../api/cars";
 import { useAuth } from "../context/AuthContext.jsx";
+import CarDetailsModal from "../components/CarDetailsModal.jsx";
 import "./CarsPage.css";
 
 function CarsPage() {
@@ -13,6 +14,7 @@ function CarsPage() {
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedCar, setSelectedCar] = useState(null);
   const shouldRedirectAdmin = !authLoading && isAuthenticated && user?.isAdmin;
   
   const formatDate = (date) => {
@@ -67,6 +69,9 @@ function CarsPage() {
     category: "",
     transmission: "",
   });
+
+  const modalCarId = searchParams.get("car") || "";
+  const hasSelectedDates = Boolean(urlState.startDate && urlState.endDate);
 
   useEffect(() => {
     setCriteria({
@@ -276,6 +281,7 @@ function CarsPage() {
                     value={criteria.startDate}
                     min={formatDate(today)}
                     onChange={handleCriteriaChange}
+                    onClick={(e) => e.currentTarget.showPicker?.()}
                   />
                 </div>
                 <div className="cars-field">
@@ -296,6 +302,7 @@ function CarsPage() {
                     value={criteria.endDate}
                     min={criteria.startDate || formatDate(today)}
                     onChange={handleCriteriaChange}
+                    onClick={(e) => e.currentTarget.showPicker?.()}
                   />
                 </div>
                 <div className="cars-field">
@@ -355,11 +362,32 @@ function CarsPage() {
                 key={car._id || car.slug || car.id}
                 {...car}
                 searchParams={datesFromUrl.startDate ? datesFromUrl : null}
+                hasSelectedDates={hasSelectedDates}
+                onChooseDates={() => {
+                  setEditOpen(true);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                onBook={() => setSelectedCar(car)}
               />
             ))}
           </div>
         )}
       </div>
+
+      {(selectedCar || modalCarId) && (
+        <CarDetailsModal
+          carId={modalCarId || selectedCar.slug || selectedCar._id || selectedCar.id}
+          initialDates={datesFromUrl.startDate ? datesFromUrl : null}
+          onClose={() => {
+            setSelectedCar(null);
+            if (modalCarId) {
+              const params = new URLSearchParams(searchParams);
+              params.delete("car");
+              setSearchParams(params, { replace: true });
+            }
+          }}
+        />
+      )}
       <Footer />
     </>
   );

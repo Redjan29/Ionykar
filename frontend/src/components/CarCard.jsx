@@ -22,10 +22,24 @@ function CarCard({
   isAvailable = true,
   nextAvailableDate,
   searchParams,
+  hasSelectedDates = false,
+  onChooseDates,
+  onBook,
 }) {
   const { formatPrice, language } = useAppContext();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
+
+  const computeIncludedKm = (days) => {
+    const d = Math.max(0, Number(days || 0));
+    if (!Number.isFinite(d) || d <= 0) return null;
+    const weeks = Math.ceil(d / 7);
+    const months = Math.ceil(d / 30);
+    const perDay = 150 * d;
+    const perWeek = 800 * weeks;
+    const perMonth = 3000 * months;
+    return Math.min(perDay, perWeek, perMonth);
+  };
   
   // Prefer SEO-friendly slugs, fallback to MongoDB id.
   const carId = slug || _id || id;
@@ -58,6 +72,27 @@ function CarCard({
   const perDayLabel =
     language === "fr" ? " / jour" : " / day";
 
+  const pricingForPeriod = useMemo(() => {
+    const startDate = searchParams?.startDate;
+    const endDate = searchParams?.endDate;
+    if (!startDate || !endDate) return null;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffMs = end - start;
+    if (!Number.isFinite(diffMs) || diffMs < 0) return null;
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+    if (!Number.isFinite(days) || days < 1) return null;
+    const total = Number(pricePerDay || 0) * days;
+    return { days, total };
+  }, [pricePerDay, searchParams?.endDate, searchParams?.startDate]);
+
+  const includedKmForPeriod = useMemo(() => {
+    if (!pricingForPeriod?.days) return null;
+    const km = computeIncludedKm(pricingForPeriod.days);
+    if (!km) return null;
+    return km;
+  }, [pricingForPeriod?.days]);
+
   useEffect(() => {
     setActiveImageIndex(0);
   }, [carId, galleryImages.length]);
@@ -76,55 +111,6 @@ function CarCard({
 
   return (
     <div className={`car-card ${!isAvailable ? 'car-card-unavailable' : ''}`}>
-      {/* Header prix + bouton */}
-      <div className="car-card-header">
-        <div className="car-card-price">
-          <span className="car-card-price-label">{priceLabel}</span>
-          <div>
-            <span className="car-card-price-value">
-              {formatPrice(pricePerDay)}
-            </span>
-            <span className="car-card-price-unit">{perDayLabel}</span>
-          </div>
-        </div>
-        <div className="car-card-actions">
-          {isAvailable ? (
-            <Link to={buildCarUrl()}>
-              <button className="car-card-button">
-                {language === "fr" ? "Réserver" : "Book"}
-              </button>
-            </Link>
-          ) : (
-            <button className="car-card-button" disabled>
-              {language === "fr" ? "Indisponible" : "Unavailable"}
-            </button>
-          )}
-
-          {!isAvailable && (
-            <div className="car-card-unavailable-text" role="status" aria-live="polite">
-              <div>
-                {language === "fr"
-                  ? "Indisponible pour ces dates"
-                  : "Unavailable for these dates"}
-              </div>
-              {nextAvailableDate && (
-                <div className="car-card-next-available">
-                  {language === "fr"
-                    ? `Disponible à partir du ${new Date(nextAvailableDate).toLocaleDateString(
-                        "fr-FR",
-                        { day: "numeric", month: "long" }
-                      )}`
-                    : `Available from ${new Date(nextAvailableDate).toLocaleDateString(
-                        "en-US",
-                        { month: "long", day: "numeric" }
-                      )}`}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Image voiture */}
       <div
         className="car-card-image-wrapper"
@@ -147,44 +133,106 @@ function CarCard({
             {activeImageIndex + 1}/{galleryImages.length}
           </span>
         )}
-      </div>
 
-      {/* Infos voiture */}
-      <div className="car-card-info">
-        <h2 className="car-card-brand">{brand}</h2>
-        <p className="car-card-model">{model}</p>
-        <p className="car-card-category">{category}</p>
-      </div>
+        <div className="car-card-overlay">
+          <div className="car-card-overlay-top">
+            <div className="car-card-overlay-title">
+              <div className="car-card-overlay-brand">{brand}</div>
+              <div className="car-card-overlay-model">{model}</div>
+              <div className="car-card-overlay-meta">
+                <span className="car-card-chip">{category}</span>
+                <span className="car-card-chip">{transmission}</span>
+                <span className="car-card-chip">{fuel}</span>
+              </div>
+            </div>
+            <div className="car-card-overlay-action">
+              {isAvailable ? (
+                typeof onBook === "function" ? (
+                  <button
+                    type="button"
+                    className="car-card-button"
+                    disabled={!hasSelectedDates}
+                    onClick={() => {
+                      if (!hasSelectedDates) {
+                        onChooseDates?.();
+                        return;
+                      }
+                      onBook({ carId, _id, id, slug });
+                    }}
+                  >
+                    {hasSelectedDates
+                      ? language === "fr"
+                        ? "Réserver"
+                        : "Book"
+                      : language === "fr"
+                        ? "Choisir des dates"
+                        : "Choose dates"}
+                  </button>
+                ) : (
+                  <Link to={buildCarUrl()}>
+                    <button className="car-card-button">
+                      {language === "fr" ? "Réserver" : "Book"}
+                    </button>
+                  </Link>
+                )
+              ) : (
+                <button className="car-card-button" disabled>
+                  {language === "fr" ? "Indisponible" : "Unavailable"}
+                </button>
+              )}
 
-      {/* Caractéristiques */}
-      <div className="car-card-features">
-        <div className="car-card-feature">
-          <div className="car-card-feature-icon">👥</div>
-          <span className="car-card-feature-label">
-            {language === "fr" ? "Places" : "Seats"}
-          </span>
-          <span className="car-card-feature-value">{seats}</span>
-        </div>
-        <div className="car-card-feature">
-          <div className="car-card-feature-icon">🧳</div>
-          <span className="car-card-feature-label">
-            {language === "fr" ? "Bagages" : "Luggage"}
-          </span>
-          <span className="car-card-feature-value">{luggage}</span>
-        </div>
-        <div className="car-card-feature">
-          <div className="car-card-feature-icon">⚙️</div>
-          <span className="car-card-feature-label">
-            {language === "fr" ? "Boîte" : "Gearbox"}
-          </span>
-          <span className="car-card-feature-value">{transmission}</span>
-        </div>
-        <div className="car-card-feature">
-          <div className="car-card-feature-icon">⛽</div>
-          <span className="car-card-feature-label">
-            {language === "fr" ? "Carburant" : "Fuel"}
-          </span>
-          <span className="car-card-feature-value">{fuel}</span>
+              {!isAvailable && (
+                <div className="car-card-unavailable-text" role="status" aria-live="polite">
+                  <div>
+                    {language === "fr"
+                      ? "Indisponible pour ces dates"
+                      : "Unavailable for these dates"}
+                  </div>
+                  {nextAvailableDate && (
+                    <div className="car-card-next-available">
+                      {language === "fr"
+                        ? `Disponible à partir du ${new Date(nextAvailableDate).toLocaleDateString(
+                            "fr-FR",
+                            { day: "numeric", month: "long" }
+                          )}`
+                        : `Available from ${new Date(nextAvailableDate).toLocaleDateString(
+                            "en-US",
+                            { month: "long", day: "numeric" }
+                          )}`}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="car-card-overlay-bottom">
+            <div className="car-card-km">
+              {includedKmForPeriod ? (
+                <>✓ {includedKmForPeriod.toLocaleString("fr-FR")} km inclus pour vos dates</>
+              ) : (
+                <>✓ Kilométrage inclus (selon la période)</>
+              )}
+            </div>
+            <div className="car-card-pricing">
+              {pricingForPeriod ? (
+                <>
+                  <div className="car-card-total">
+                    {formatPrice(pricingForPeriod.total)}
+                  </div>
+                  <div className="car-card-perday">
+                    ({formatPrice(pricePerDay)}
+                    {perDayLabel})
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="car-card-total">{formatPrice(pricePerDay)}</div>
+                  <div className="car-card-perday">{perDayLabel}</div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
