@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createReservation } from "../api/reservations";
 import { activateAccount } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
@@ -9,6 +9,14 @@ import "./BookingForm.css";
 export default function BookingForm({ car, onClose, initialDates }) {
   const { login: authLogin, isAuthenticated, user } = useAuth();
   const { toasts, hideToast, success, error, warning } = useToast();
+  const formatEUR = (value) =>
+    Number.isFinite(value)
+      ? new Intl.NumberFormat("fr-FR", {
+          style: "currency",
+          currency: "EUR",
+          maximumFractionDigits: 0,
+        }).format(value)
+      : "—";
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -26,6 +34,13 @@ export default function BookingForm({ car, onClose, initialDates }) {
   const [accountPassword, setAccountPassword] = useState("");
   const [accountError, setAccountError] = useState("");
   const [reservationSuccess, setReservationSuccess] = useState(null);
+  const [extras, setExtras] = useState({
+    unlimitedKm: false,
+    snowChains: false,
+    fullFuelOption: false,
+    delivery: false,
+    extraKm: 0,
+  });
 
 
   const handleChange = (e) => {
@@ -33,9 +48,21 @@ export default function BookingForm({ car, onClose, initialDates }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleExtrasChange = (e) => {
+    const { name, type, checked, value } = e.target;
+    setExtras((prev) => {
+      if (type === "checkbox") return { ...prev, [name]: checked };
+      if (name === "extraKm") {
+        const nextVal = Math.max(0, Math.min(9999, Number(value || 0)));
+        return { ...prev, extraKm: Number.isFinite(nextVal) ? nextVal : 0 };
+      }
+      return { ...prev, [name]: value };
+    });
+  };
+
   // calcul nombre de jours + prix estimé
   let days = null;
-  let totalPrice = null;
+  let basePrice = null;
   let dateError = null;
   let licenseError = null;
 
@@ -49,7 +76,7 @@ export default function BookingForm({ car, onClose, initialDates }) {
     } else {
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1; // min 1 jour
       days = diffDays;
-      totalPrice = diffDays * car.pricePerDay;
+      basePrice = diffDays * car.pricePerDay;
     }
 
     // Vérification date d'expiration du permis (pour non connectés)
@@ -72,6 +99,53 @@ export default function BookingForm({ car, onClose, initialDates }) {
       }
     }
   }
+
+  const pricing = useMemo(() => {
+    const numberOfDays = days || 0;
+    const base = basePrice || 0;
+
+    const unlimitedKmPerDay = 20; // €/jour
+    const snowChainsFlat = 10; // €
+    const fullFuelFlat = 50; // €
+    const deliveryFlat = 30; // €
+    const extraKmRate = 0.25; // €/km
+
+    const unlimitedKm = extras.unlimitedKm ? unlimitedKmPerDay * numberOfDays : 0;
+    const snowChains = extras.snowChains ? snowChainsFlat : 0;
+    const fullFuel = extras.fullFuelOption ? fullFuelFlat : 0;
+    const delivery = extras.delivery ? deliveryFlat : 0;
+    const extraKm = Math.max(0, Number(extras.extraKm || 0));
+    const extraKmCost = extraKm ? extraKm * extraKmRate : 0;
+
+    const extrasTotal = unlimitedKm + snowChains + fullFuel + delivery + extraKmCost;
+    const total = base + extrasTotal;
+
+    return {
+      base,
+      extrasTotal,
+      total,
+      breakdown: {
+        unlimitedKm,
+        snowChains,
+        fullFuel,
+        delivery,
+        extraKm,
+        extraKmRate,
+        extraKmCost,
+      },
+    };
+  }, [basePrice, days, extras]);
+
+  const buildNotes = () => {
+    const lines = [];
+    if (extras.unlimitedKm) lines.push("Option: Kilométrage illimité");
+    if (extras.snowChains) lines.push("Option: Chaînes neige");
+    if (extras.fullFuelOption) lines.push("Option: Plein carburant (service)");
+    if (extras.delivery) lines.push("Option: Livraison / récupération");
+    if (extras.extraKm) lines.push(`Option: Kilomètres supplémentaires: ${extras.extraKm} km`);
+    if (!lines.length) return undefined;
+    return lines.join(" | ");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -125,6 +199,7 @@ export default function BookingForm({ car, onClose, initialDates }) {
         startTime: formData.startTime,
         endTime: formData.endTime,
         user: userData,
+        notes: buildNotes(),
       });
 
       // Si déjà connecté, confirmation simple et fermeture
@@ -133,7 +208,7 @@ export default function BookingForm({ car, onClose, initialDates }) {
         setTimeout(() => onClose(), 6000);
       } else {
         // Si non connecté, afficher la modale de création de compte
-        setReservationSuccess({ days, totalPrice, email: formData.email });
+        setReservationSuccess({ days, totalPrice: pricing.total, email: formData.email });
         setShowAccountModal(true);
       }
     } catch (err) {
@@ -411,10 +486,88 @@ export default function BookingForm({ car, onClose, initialDates }) {
         {licenseError && <p className="booking-error">{licenseError}</p>}
 
         {days && !dateError && !licenseError && (
-          <div className="booking-summary">
-            <p>Durée : <strong>{days}</strong> jour(s)</p>
-            <p>Prix estimé : <strong>{totalPrice}€</strong></p>
-          </div>
+          <>
+            <div className="booking-extras">
+              <div className="booking-extras-title">Options</div>
+              <div className="booking-extras-grid">
+                <label className="booking-extra">
+                  <input
+                    type="checkbox"
+                    name="unlimitedKm"
+                    checked={extras.unlimitedKm}
+                    onChange={handleExtrasChange}
+                  />
+                  <span>Kilométrage illimité</span>
+                  <span className="booking-extra-price">+20€ / jour</span>
+                </label>
+
+                <label className="booking-extra">
+                  <input
+                    type="checkbox"
+                    name="snowChains"
+                    checked={extras.snowChains}
+                    onChange={handleExtrasChange}
+                  />
+                  <span>Chaînes neige</span>
+                  <span className="booking-extra-price">+10€</span>
+                </label>
+
+                <label className="booking-extra">
+                  <input
+                    type="checkbox"
+                    name="fullFuelOption"
+                    checked={extras.fullFuelOption}
+                    onChange={handleExtrasChange}
+                  />
+                  <span>Option plein carburant</span>
+                  <span className="booking-extra-price">+50€</span>
+                </label>
+
+                <label className="booking-extra">
+                  <input
+                    type="checkbox"
+                    name="delivery"
+                    checked={extras.delivery}
+                    onChange={handleExtrasChange}
+                  />
+                  <span>Livraison / récupération</span>
+                  <span className="booking-extra-price">+30€</span>
+                </label>
+
+                <div className="booking-extra booking-extra-km">
+                  <div className="booking-extra-km-left">
+                    <div className="booking-extra-km-label">Kilomètres supplémentaires</div>
+                    <div className="booking-extra-km-hint">0,25€ / km</div>
+                  </div>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={9999}
+                    name="extraKm"
+                    value={extras.extraKm}
+                    onChange={handleExtrasChange}
+                    className="booking-extra-km-input"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="booking-summary">
+              <p>
+                Durée : <strong>{days}</strong> jour(s)
+              </p>
+              <p>
+                Sous-total : <strong>{formatEUR(pricing.base)}</strong>
+              </p>
+              <p>
+                Options : <strong>{formatEUR(pricing.extrasTotal)}</strong>
+              </p>
+              <p className="booking-total">
+                Total estimé : <strong>{formatEUR(pricing.total)}</strong>
+              </p>
+            </div>
+          </>
         )}
 
         <div className="booking-form-actions">

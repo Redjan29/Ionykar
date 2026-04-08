@@ -87,33 +87,43 @@ function CarCard({
             <span className="car-card-price-unit">{perDayLabel}</span>
           </div>
         </div>
-        {isAvailable ? (
-          <Link to={buildCarUrl()}>
-            <button className="car-card-button">
-              {language === "fr" ? "Réserver" : "Book"}
+        <div className="car-card-actions">
+          {isAvailable ? (
+            <Link to={buildCarUrl()}>
+              <button className="car-card-button">
+                {language === "fr" ? "Réserver" : "Book"}
+              </button>
+            </Link>
+          ) : (
+            <button className="car-card-button" disabled>
+              {language === "fr" ? "Indisponible" : "Unavailable"}
             </button>
-          </Link>
-        ) : (
-          <button className="car-card-button" disabled>
-            {language === "fr" ? "Indisponible" : "Unavailable"}
-          </button>
-        )}
-      </div>
+          )}
 
-      {/* Badge indisponible */}
-      {!isAvailable && (
-        <div className="car-card-unavailable-badge">
-          <div>{language === "fr" ? "Indisponible pour ces dates" : "Unavailable for these dates"}</div>
-          {nextAvailableDate && (
-            <div className="car-card-next-available">
-              {language === "fr" 
-                ? `Disponible à partir du ${new Date(nextAvailableDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
-                : `Available from ${new Date(nextAvailableDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
-              }
+          {!isAvailable && (
+            <div className="car-card-unavailable-text" role="status" aria-live="polite">
+              <div>
+                {language === "fr"
+                  ? "Indisponible pour ces dates"
+                  : "Unavailable for these dates"}
+              </div>
+              {nextAvailableDate && (
+                <div className="car-card-next-available">
+                  {language === "fr"
+                    ? `Disponible à partir du ${new Date(nextAvailableDate).toLocaleDateString(
+                        "fr-FR",
+                        { day: "numeric", month: "long" }
+                      )}`
+                    : `Available from ${new Date(nextAvailableDate).toLocaleDateString(
+                        "en-US",
+                        { month: "long", day: "numeric" }
+                      )}`}
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
+      </div>
 
       {/* Image voiture */}
       <div

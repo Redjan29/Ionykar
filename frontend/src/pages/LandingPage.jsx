@@ -28,6 +28,7 @@ export default function LandingPage() {
   };
   
   const [searchParams, setSearchParams] = useState({
+    station: "bastille",
     startDate: formatDate(today),
     startTime: "09:00",
     endDate: formatDate(threeDaysLater),
@@ -53,6 +54,7 @@ export default function LandingPage() {
   // Fonction pour construire l'URL avec les dates
   const buildUrlWithDates = (basePath) => {
     const params = new URLSearchParams({
+      station: searchParams.station,
       startDate: searchParams.startDate,
       startTime: searchParams.startTime,
       endDate: searchParams.endDate,
@@ -150,6 +152,16 @@ export default function LandingPage() {
           {/* Barre de recherche */}
           <div className="search-bar-container">
             <div className="search-bar">
+              <div className="search-field">
+                <label>Station</label>
+                <select
+                  name="station"
+                  value={searchParams.station}
+                  onChange={handleSearchChange}
+                >
+                  <option value="bastille">Paris 12e — Bastille</option>
+                </select>
+              </div>
               <div className="search-field">
                 <label>Date de départ</label>
                 <input

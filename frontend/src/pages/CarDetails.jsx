@@ -1,5 +1,5 @@
 // src/pages/CarDetails.jsx
-import { useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import { fetchCarById } from "../api/cars";
 import BookingForm from "../components/BookingForm";
@@ -20,6 +20,7 @@ export default function CarDetails() {
 
   const [showForm, setShowForm] = useState(false);
   const formRef = useRef(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   
   // Récupérer les dates des query params
   const datesFromUrl = {
@@ -53,6 +54,24 @@ export default function CarDetails() {
       isMounted = false;
     };
   }, [id]);
+
+  const galleryImages = useMemo(() => {
+    const values = [];
+    if (car?.imageUrl && typeof car.imageUrl === "string" && car.imageUrl.trim()) {
+      values.push(car.imageUrl.trim());
+    }
+    if (Array.isArray(car?.imageUrls)) {
+      car.imageUrls.forEach((url) => {
+        if (typeof url === "string" && url.trim()) values.push(url.trim());
+      });
+    }
+    const unique = Array.from(new Set(values));
+    return unique.length ? unique : [FALLBACK_CAR_IMAGE];
+  }, [car]);
+
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [id, galleryImages.length]);
 
   useEffect(() => {
     if (showForm && formRef.current) {
@@ -108,7 +127,7 @@ export default function CarDetails() {
           {/* LEFT */}
           <div className="car-details-left">
             <img
-              src={resolveImageUrl(car.imageUrl)}
+              src={resolveImageUrl(galleryImages[activeImageIndex])}
               alt={car.brand}
               className="car-details-main-image"
               onError={(event) => {
@@ -117,14 +136,26 @@ export default function CarDetails() {
             />
 
             <div className="car-details-thumbs">
-              <img
-                src={resolveImageUrl(car.imageUrl)}
-                alt="thumb"
-                className="car-details-thumb active"
-                onError={(event) => {
-                  event.currentTarget.src = FALLBACK_CAR_IMAGE;
-                }}
-              />
+              {galleryImages.slice(0, 6).map((url, idx) => (
+                <button
+                  key={`${url}-${idx}`}
+                  type="button"
+                  className={`car-details-thumb-btn ${
+                    idx === activeImageIndex ? "active" : ""
+                  }`}
+                  onClick={() => setActiveImageIndex(idx)}
+                  aria-label={`Photo ${idx + 1}`}
+                >
+                  <img
+                    src={resolveImageUrl(url)}
+                    alt={`${car.brand} ${car.model} ${idx + 1}`}
+                    className="car-details-thumb"
+                    onError={(event) => {
+                      event.currentTarget.src = FALLBACK_CAR_IMAGE;
+                    }}
+                  />
+                </button>
+              ))}
             </div>
           </div>
 
@@ -176,6 +207,18 @@ export default function CarDetails() {
                 {language === "fr"
                   ? "Permis valide (3 ans minimum)"
                   : "Valid driving license (3+ years)"}
+              </div>
+              <div className="car-requirement-item">
+                🛡️{" "}
+                {language === "fr"
+                  ? "Assistance + assurance incluses (selon CGL)"
+                  : "Roadside assistance + insurance included (per terms)"}
+              </div>
+              <div className="car-requirement-item">
+                🧾{" "}
+                {language === "fr"
+                  ? "Forfait kilométrique inclus (voir options)"
+                  : "Mileage package included (see options)"}
               </div>
             </div>
 

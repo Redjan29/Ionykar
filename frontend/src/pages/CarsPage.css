@@ -3,6 +3,136 @@
   padding: 44px 20px 20px;
 }
 
+.cars-criteria {
+  max-width: 1080px;
+  margin: 0 auto 18px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cars-criteria-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.cars-criteria-title {
+  font-family: var(--ik-font-title);
+  font-size: 18px;
+  letter-spacing: 0.2px;
+}
+
+.cars-criteria-sub {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  color: var(--ik-muted);
+}
+
+.cars-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 13px;
+}
+
+.cars-criteria-edit {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ik-white);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease;
+  white-space: nowrap;
+}
+
+.cars-criteria-edit:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.cars-criteria-panel {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.cars-criteria-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.cars-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cars-field label {
+  font-size: 12px;
+  color: var(--ik-muted-2);
+}
+
+.cars-field input,
+.cars-field select {
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--ik-white);
+  padding: 0 12px;
+  outline: none;
+}
+
+.cars-field input:focus,
+.cars-field select:focus {
+  border-color: rgba(252, 190, 12, 0.55);
+  box-shadow: 0 0 0 4px rgba(252, 190, 12, 0.12);
+}
+
+.cars-field-cta {
+  justify-content: flex-end;
+}
+
+.cars-apply {
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(252, 190, 12, 0.45);
+  background: rgba(252, 190, 12, 0.12);
+  color: var(--ik-white);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.cars-apply:hover {
+  background: rgba(252, 190, 12, 0.18);
+}
+
+.cars-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 14px;
+}
+
+.cars-filters-count {
+  color: var(--ik-muted);
+  font-size: 13px;
+  padding-bottom: 10px;
+  text-align: right;
+}
+
 .cars-page-grid {
   max-width: 1080px;
   margin: 0 auto;
@@ -23,6 +153,19 @@
 }
 
 @media (max-width: 900px) {
+  .cars-criteria-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cars-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .cars-filters-count {
+    text-align: left;
+    padding-bottom: 0;
+  }
+
   .cars-page-grid {
     grid-template-columns: 1fr;
   }

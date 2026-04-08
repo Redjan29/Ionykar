@@ -29,18 +29,32 @@
   display: flex;
   gap: 10px;
   margin-top: 15px;
+  flex-wrap: wrap;
+}
+
+.car-details-thumb-btn {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 10px;
+  outline: none;
+}
+
+.car-details-thumb-btn:focus-visible {
+  box-shadow: 0 0 0 4px rgba(252, 190, 12, 0.18);
 }
 
 .car-details-thumb {
-  width: 70px;
-  height: 70px;
-  border-radius: 8px;
+  width: 74px;
+  height: 74px;
+  border-radius: 10px;
   border: 2px solid transparent;
-  cursor: pointer;
   object-fit: cover;
+  display: block;
 }
 
-.car-details-thumb.active {
+.car-details-thumb-btn.active .car-details-thumb {
   border-color: rgba(252, 190, 12, 0.9);
 }
 
