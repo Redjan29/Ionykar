@@ -11,6 +11,14 @@ import {
   FinanceCharge,
 } from "../models/index.js";
 
+const KYC_STATUSES = new Set(["MISSING", "PENDING", "APPROVED", "REJECTED"]);
+const USER_DOC_TYPES = new Set([
+  "profilePhoto",
+  "driverLicensePhoto",
+  "selfieWithLicense",
+  "proofOfResidence",
+]);
+
 const MAINTENANCE_CATEGORIES = [
   "REVISION",
   "VIDANGE",
@@ -813,9 +821,71 @@ export async function getAllUsers(req, res, next) {
     const users = await User.find(filters)
       .select("-password")
       .sort({ createdAt: -1 })
-      .populate("reservations");
+      .populate("reservations")
+      .lean({ virtuals: true });
 
     res.json({ data: users });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Admin: validate or reject a specific KYC document for a user
+export async function reviewUserDocument(req, res, next) {
+  try {
+    const { id, docType } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      const err = new Error("Invalid user id");
+      err.status = 400;
+      throw err;
+    }
+    if (!USER_DOC_TYPES.has(String(docType))) {
+      const err = new Error("Invalid document type");
+      err.status = 400;
+      throw err;
+    }
+
+    const { status, rejectedReason } = req.body || {};
+    const normalizedStatus = String(status || "").toUpperCase();
+    if (!KYC_STATUSES.has(normalizedStatus)) {
+      const err = new Error("Invalid status");
+      err.status = 400;
+      throw err;
+    }
+
+    const now = new Date();
+    const setUpdates = {
+      [`kyc.${docType}.status`]: normalizedStatus,
+      [`kyc.${docType}.reviewedAt`]: now,
+    };
+
+    const unsetUpdates = {};
+    if (normalizedStatus === "REJECTED") {
+      if (!rejectedReason || String(rejectedReason).trim().length < 3) {
+        const err = new Error("rejectedReason is required when status is REJECTED");
+        err.status = 400;
+        throw err;
+      }
+      setUpdates[`kyc.${docType}.rejectedReason`] = String(rejectedReason).trim().slice(0, 500);
+    } else {
+      unsetUpdates[`kyc.${docType}.rejectedReason`] = "";
+    }
+
+    const updated = await User.findByIdAndUpdate(
+      id,
+      { $set: setUpdates, ...(Object.keys(unsetUpdates).length ? { $unset: unsetUpdates } : {}) },
+      { new: true, runValidators: true }
+    )
+      .select("-password")
+      .lean({ virtuals: true });
+
+    if (!updated) {
+      const err = new Error("User not found");
+      err.status = 404;
+      throw err;
+    }
+
+    res.json({ data: updated });
   } catch (error) {
     next(error);
   }

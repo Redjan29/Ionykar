@@ -1,5 +1,28 @@
 import mongoose from "mongoose";
 
+const KYC_STATUSES = ["MISSING", "PENDING", "APPROVED", "REJECTED"];
+
+const kycDocumentSchema = new mongoose.Schema(
+  {
+    url: { type: String, maxlength: 500 },
+    status: { type: String, enum: KYC_STATUSES, default: "MISSING", index: true },
+    rejectedReason: { type: String, maxlength: 500 },
+    updatedAt: { type: Date },
+    reviewedAt: { type: Date },
+  },
+  { _id: false }
+);
+
+const kycSchema = new mongoose.Schema(
+  {
+    profilePhoto: { type: kycDocumentSchema, default: () => ({}) },
+    driverLicensePhoto: { type: kycDocumentSchema, default: () => ({}) },
+    selfieWithLicense: { type: kycDocumentSchema, default: () => ({}) },
+    proofOfResidence: { type: kycDocumentSchema, default: () => ({}) },
+  },
+  { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
   {
     email: {
@@ -64,6 +87,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       maxlength: 3000000,
     },
+    // New KYC model (file uploads stored as URLs; statuses tracked per document)
+    kyc: {
+      type: kycSchema,
+      default: () => ({}),
+    },
     licenseObtainedDate: {
       type: Date,
     },
@@ -94,5 +122,11 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+userSchema.virtual("kycApproved").get(function kycApproved() {
+  const required = ["driverLicensePhoto", "proofOfResidence"];
+  const kyc = this.kyc || {};
+  return required.every((key) => kyc?.[key]?.status === "APPROVED");
+});
 
 export const User = mongoose.model("User", userSchema);

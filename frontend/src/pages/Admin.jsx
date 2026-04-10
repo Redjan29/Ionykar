@@ -25,6 +25,7 @@ import {
   deleteFinanceCharge,
   updateCarInvestment,
   uploadCarImages as uploadCarImagesApi,
+  reviewUserDocument,
 } from "../api/admin";
 import "./Admin.css";
 
@@ -506,7 +507,7 @@ export default function Admin() {
               )}
 
               {activeTab === "client-documents" && (
-                <ClientDocumentsView users={users} />
+                <ClientDocumentsView users={users} token={token} onRefresh={loadData} />
               )}
 
               {activeTab === "finance-profitability" && (
@@ -664,34 +665,351 @@ function FleetCategoriesView({ cars = [] }) {
   );
 }
 
-function ClientDocumentsView({ users = [] }) {
+function resolveMaybeUploadUrl(url) {
+  if (!url || typeof url !== "string") return "";
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) return url;
+  if (url.startsWith("/uploads/")) {
+    const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+    return `${base}${url}`;
+  }
+  return url;
+}
+
+function KycStatusPill({ status }) {
+  const normalized = String(status || "MISSING").toUpperCase();
+  const labelMap = {
+    MISSING: "Manquant",
+    PENDING: "En attente",
+    APPROVED: "Validé",
+    REJECTED: "Refusé",
+  };
+  return (
+    <span className={`kyc-pill kyc-pill-${normalized.toLowerCase()}`}>
+      {labelMap[normalized] || normalized}
+    </span>
+  );
+}
+
+function Icon({ children }) {
+  return (
+    <span className="admin-icon" aria-hidden="true">
+      {children}
+    </span>
+  );
+}
+
+function IdCardIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M4 7.5C4 6.12 5.12 5 6.5 5h11C18.88 5 20 6.12 20 7.5v9c0 1.38-1.12 2.5-2.5 2.5h-11C5.12 19 4 17.88 4 16.5v-9Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path d="M8 10h7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M8 13h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M15.8 15.2a2.1 2.1 0 1 0-3.6 0"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function HomeDocIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M3.5 10.5 12 4l8.5 6.5V20a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 20v-9.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="M9 21v-7h6v7" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function UserPhotoIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M20 20a8 8 0 1 0-16 0"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+function SelfieIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M7 7h6l1-2h3a2 2 0 0 1 2 2v11a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V9a2 2 0 0 1 2-2Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 17a3.2 3.2 0 1 0-3.2-3.2A3.2 3.2 0 0 0 12 17Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path d="M17.5 10.5h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function DocumentPreviewModal({ open, title, url, onClose }) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
+
+  if (!open) return null;
+  const isPdf = String(url || "").toLowerCase().includes(".pdf");
+  return (
+    <div
+      className="admin-modal-backdrop"
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose?.();
+      }}
+    >
+      <div className="admin-modal" role="dialog" aria-modal="true">
+        <div className="admin-modal-top">
+          <div className="admin-modal-title">{title}</div>
+          <button type="button" className="admin-modal-close" onClick={onClose} aria-label="Fermer">
+            ×
+          </button>
+        </div>
+        <div className="admin-modal-body">
+          {isPdf ? (
+            <iframe title={title} src={url} className="admin-modal-frame" />
+          ) : (
+            <img src={url} alt={title} className="admin-modal-image" />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ClientDocumentsView({ users = [], token, onRefresh }) {
+  const [draftReasons, setDraftReasons] = useState({});
+  const [savingKey, setSavingKey] = useState(null);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("PENDING");
+  const [docTypeFilter, setDocTypeFilter] = useState("any");
+  const [preview, setPreview] = useState(null);
+
+  const getDoc = (user, docType) => user?.kyc?.[docType] || {};
+  const docUrl = (user, docType) => getDoc(user, docType).url || user?.[docType] || "";
+  const docStatus = (user, docType) => getDoc(user, docType).status || (docUrl(user, docType) ? "PENDING" : "MISSING");
+  const docReason = (user, docType) => getDoc(user, docType).rejectedReason || "";
+
+  const docTypes = ["profilePhoto", "driverLicensePhoto", "selfieWithLicense", "proofOfResidence"];
+  const filteredUsers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const matchesQuery = (u) => {
+      if (!q) return true;
+      const name = `${u.firstName || ""} ${u.lastName || ""}`.trim().toLowerCase();
+      const email = String(u.email || "").toLowerCase();
+      return name.includes(q) || email.includes(q);
+    };
+
+    const matchStatus = (u) => {
+      if (!statusFilter || statusFilter === "ALL") return true;
+      const target = String(statusFilter).toUpperCase();
+      if (docTypeFilter !== "any") {
+        return docStatus(u, docTypeFilter) === target;
+      }
+      return docTypes.some((t) => docStatus(u, t) === target);
+    };
+
+    return users.filter((u) => matchesQuery(u) && matchStatus(u));
+  }, [docTypeFilter, query, statusFilter, users]);
+
+  const handleApprove = async (userId, docType) => {
+    if (!token) return;
+    const key = `${userId}:${docType}`;
+    setSavingKey(key);
+    try {
+      await reviewUserDocument(token, userId, docType, { status: "APPROVED" });
+      onRefresh?.();
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
+  const handleReject = async (userId, docType) => {
+    if (!token) return;
+    const key = `${userId}:${docType}`;
+    const reason = String(draftReasons[key] || "").trim();
+    if (reason.length < 3) {
+      alert("Merci de renseigner une raison de refus (min. 3 caractères).");
+      return;
+    }
+    setSavingKey(key);
+    try {
+      await reviewUserDocument(token, userId, docType, { status: "REJECTED", rejectedReason: reason });
+      onRefresh?.();
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
   return (
     <div className="users-view">
-      {users.length === 0 ? (
+      <div className="kyc-filterbar">
+        <div className="kyc-filter-controls">
+          <input
+            className="kyc-search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher un client (nom / email)…"
+          />
+
+          <select className="kyc-select" value={docTypeFilter} onChange={(e) => setDocTypeFilter(e.target.value)}>
+            <option value="any">Tous les documents</option>
+            <option value="profilePhoto">Photo profil</option>
+            <option value="driverLicensePhoto">Photo permis</option>
+            <option value="selfieWithLicense">Selfie + permis</option>
+            <option value="proofOfResidence">Justificatif domicile</option>
+          </select>
+
+          <select className="kyc-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="ALL">Tous statuts</option>
+            <option value="PENDING">En attente</option>
+            <option value="APPROVED">Validé</option>
+            <option value="REJECTED">Refusé</option>
+            <option value="MISSING">Manquant</option>
+          </select>
+        </div>
+        <div className="kyc-filter-count">
+          {filteredUsers.length} client{filteredUsers.length > 1 ? "s" : ""}
+        </div>
+      </div>
+
+      <DocumentPreviewModal
+        open={Boolean(preview?.url)}
+        title={preview?.title || "Document"}
+        url={preview?.url || ""}
+        onClose={() => setPreview(null)}
+      />
+
+      {filteredUsers.length === 0 ? (
         <div className="empty-state">
-          <p>Aucun client trouvé.</p>
+          <p>
+            Aucun résultat.
+          </p>
         </div>
       ) : (
         <table className="admin-table">
           <thead>
             <tr>
               <th>Client</th>
-              <th>Permis</th>
-              <th>Photo profil</th>
-              <th>Photo permis</th>
-              <th>Selfie + permis</th>
-              <th>Justificatif domicile</th>
+              <th>
+                <span className="kyc-th">
+                  <Icon><UserPhotoIcon /></Icon> Photo profil
+                </span>
+              </th>
+              <th>
+                <span className="kyc-th">
+                  <Icon><IdCardIcon /></Icon> Photo permis
+                </span>
+              </th>
+              <th>
+                <span className="kyc-th">
+                  <Icon><SelfieIcon /></Icon> Selfie + permis
+                </span>
+              </th>
+              <th>
+                <span className="kyc-th">
+                  <Icon><HomeDocIcon /></Icon> Justificatif domicile
+                </span>
+              </th>
             </tr>
           </thead>
           <tbody>
-            {users.map((currentUser) => (
+            {filteredUsers.map((currentUser) => (
               <tr key={currentUser._id}>
                 <td>{`${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() || currentUser.email}</td>
-                <td>{currentUser.licenseNumber ? "Oui" : "Non"}</td>
-                <td>{currentUser.profilePhoto ? "Oui" : "Non"}</td>
-                <td>{currentUser.driverLicensePhoto ? "Oui" : "Non"}</td>
-                <td>{currentUser.selfieWithLicense ? "Oui" : "Non"}</td>
-                <td>{currentUser.proofOfResidence ? "Oui" : "Non"}</td>
+                {docTypes.map((docType) => {
+                  const url = docUrl(currentUser, docType);
+                  const status = docStatus(currentUser, docType);
+                  const reason = docReason(currentUser, docType);
+                  const key = `${currentUser._id}:${docType}`;
+                  const previewUrl = resolveMaybeUploadUrl(url);
+                  const isSaving = savingKey === key;
+
+                  return (
+                    <td key={docType} className="kyc-cell">
+                      <div className="kyc-cell-top">
+                        <KycStatusPill status={status} />
+                        {previewUrl ? (
+                          <button
+                            type="button"
+                            className="kyc-preview-link"
+                            onClick={() =>
+                              setPreview({
+                                title: `${(currentUser.firstName || "").trim()} ${(currentUser.lastName || "").trim()} — ${docType}`,
+                                url: previewUrl,
+                              })
+                            }
+                          >
+                            Voir
+                          </button>
+                        ) : (
+                          <span className="kyc-preview-missing">—</span>
+                        )}
+                      </div>
+
+                      {status === "REJECTED" && reason ? (
+                        <div className="kyc-reason">Raison: {reason}</div>
+                      ) : null}
+
+                      <div className="kyc-actions">
+                        <button
+                          type="button"
+                          className="kyc-approve"
+                          disabled={!previewUrl || isSaving}
+                          onClick={() => handleApprove(currentUser._id, docType)}
+                        >
+                          Valider
+                        </button>
+                        <button
+                          type="button"
+                          className="kyc-reject"
+                          disabled={!previewUrl || isSaving}
+                          onClick={() => handleReject(currentUser._id, docType)}
+                        >
+                          Refuser
+                        </button>
+                      </div>
+
+                      <input
+                        className="kyc-reason-input"
+                        placeholder="Raison de refus (ex: photo floue)"
+                        value={draftReasons[key] || ""}
+                        onChange={(e) => setDraftReasons((prev) => ({ ...prev, [key]: e.target.value }))}
+                      />
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>

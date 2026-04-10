@@ -141,6 +141,16 @@ export async function createReservation(req, res, next) {
         existingUser = createdUsers[0];
       }
 
+      // KYC gate: user must have required docs approved before reserving
+      const kyc = existingUser.kyc || {};
+      const requiredDocs = ["driverLicensePhoto", "proofOfResidence"];
+      const missingApproval = requiredDocs.find((key) => kyc?.[key]?.status !== "APPROVED");
+      if (missingApproval) {
+        const err = new Error("KYC not approved. Please upload required documents and wait for admin validation.");
+        err.status = 403;
+        throw err;
+      }
+
       const createdReservations = await Reservation.create(
         [
           {

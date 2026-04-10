@@ -148,6 +148,7 @@ export default function CarDetailsModal({ carId, initialDates, onClose }) {
             {step === "details" ? (
               <div className="ik-modal-body">
                 <div className="ik-modal-media">
+                  <div className="ik-modal-image-frame">
                   <img
                     src={resolveImageUrl(galleryImages[activeImageIndex])}
                     alt={`${car.brand} ${car.model}`}
@@ -156,6 +157,25 @@ export default function CarDetailsModal({ carId, initialDates, onClose }) {
                       event.currentTarget.src = FALLBACK_CAR_IMAGE;
                     }}
                   />
+                  <div className="ik-media-overlay" aria-hidden="true">
+                    <div className="ik-media-overlay-top">
+                      <div className="ik-media-title">{car.brand} {car.model}</div>
+                      <div className="ik-media-subtitle">
+                        {car.category} • {car.transmission}
+                      </div>
+                    </div>
+                    <div className="ik-media-overlay-bottom">
+                      <div className="ik-media-icons">
+                        <span className="ik-icon-chip">👥 {car.seats ?? "—"} places</span>
+                        <span className="ik-icon-chip">🧳 {car.luggage ?? "—"} bagages</span>
+                        <span className="ik-icon-chip">⛽ {car.fuel}</span>
+                        {includedKmForPeriod ? (
+                          <span className="ik-icon-chip">✓ {includedKmForPeriod.toLocaleString("fr-FR")} km inclus</span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                  </div>
                   {galleryImages.length > 1 && (
                     <div className="ik-modal-thumbs" aria-label="Galerie">
                       {galleryImages.slice(0, 6).map((url, idx) => (
@@ -217,13 +237,13 @@ export default function CarDetailsModal({ carId, initialDates, onClose }) {
                     <summary>{language === "fr" ? "Caractéristiques & options" : "Features"}</summary>
                     <div className="ik-accordion-body">
                       <div className="ik-feature-grid">
-                        <div>🎨 Couleur : <strong>Noir (à confirmer)</strong></div>
-                        <div>📱 Apple CarPlay : <strong>Oui (à confirmer)</strong></div>
-                        <div>🤖 Android Auto : <strong>Oui (à confirmer)</strong></div>
-                        <div>🧭 GPS intégré : <strong>Oui (à confirmer)</strong></div>
-                        <div>🔥 Sièges chauffants : <strong>Non (à confirmer)</strong></div>
-                        <div>📷 Caméra de recul : <strong>Oui (à confirmer)</strong></div>
-                        <div>❄️ Chaînes neige incluses : <strong>Non (à confirmer)</strong></div>
+                        <div>🎨 Couleur : <strong>Noir</strong></div>
+                        <div>📱 Apple CarPlay : <strong>Oui</strong></div>
+                        <div>🤖 Android Auto : <strong>Oui</strong></div>
+                        <div>🧭 GPS intégré : <strong>Oui</strong></div>
+                        <div>🔥 Sièges chauffants : <strong>Non</strong></div>
+                        <div>📷 Caméra de recul : <strong>Oui</strong></div>
+                        <div>❄️ Chaînes neige incluses : <strong>Non</strong></div>
                       </div>
                     </div>
                   </details>

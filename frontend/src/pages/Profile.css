@@ -66,6 +66,24 @@
   font-size: 1rem;
   transition: all 0.2s ease;
   box-sizing: border-box;
+  background: #ffffff;
+  color: #111827;
+}
+
+.form-group input::placeholder {
+  color: #9ca3af;
+}
+
+.form-group input[type="date"] {
+  color-scheme: light;
+}
+
+.profile-doc-link {
+  display: inline-flex;
+  margin-top: 10px;
+  font-weight: 800;
+  color: #111827;
+  text-decoration: underline;
 }
 
 .form-group input[type="file"] {

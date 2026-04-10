@@ -104,7 +104,7 @@
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
   color: var(--ik-white);
-  padding: 7px 12px;
+  padding: 6px 10px;
   font-size: 13px;
   font-weight: 600;
   display: inline-flex;
@@ -121,6 +121,28 @@
 
 .locale-trigger-separator {
   color: #9ca3af;
+}
+
+.locale-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.locale-pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.locale-pill-code {
+  font-weight: 900;
+  letter-spacing: 0.08em;
 }
 
 .locale-modal-overlay {

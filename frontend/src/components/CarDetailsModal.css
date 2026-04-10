@@ -87,13 +87,68 @@
   gap: 12px;
 }
 
+.ik-modal-image-frame {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
 .ik-modal-image {
   width: 100%;
   height: 520px;
   object-fit: cover;
-  border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+}
+
+.ik-media-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 60% at 70% 45%, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.65) 80%),
+    linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.78) 100%);
+}
+
+.ik-media-title {
+  font-family: var(--ik-font-title);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  text-shadow: 0 10px 26px rgba(0, 0, 0, 0.75);
+}
+
+.ik-media-subtitle {
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+  font-weight: 700;
+  text-shadow: 0 10px 26px rgba(0, 0, 0, 0.75);
+}
+
+.ik-media-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ik-icon-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.42);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  font-weight: 800;
+  backdrop-filter: blur(10px);
+  text-shadow: 0 10px 22px rgba(0, 0, 0, 0.7);
 }
 
 .ik-modal-thumbs {

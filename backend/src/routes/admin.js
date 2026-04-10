@@ -22,6 +22,7 @@ import {
   deleteFinanceCharge,
   updateCarInvestment,
   uploadCarImages,
+  reviewUserDocument,
 } from "../controllers/adminController.js";
 
 const router = express.Router();
@@ -39,6 +40,7 @@ router.patch("/reservations/:id/status", updateReservationStatus);
 // Gestion des utilisateurs
 router.get("/users", getAllUsers);
 router.patch("/users/:id", updateUser);
+router.patch("/users/:id/documents/:docType", reviewUserDocument);
 
 // Gestion des voitures
 router.get("/cars", getAllCars);
