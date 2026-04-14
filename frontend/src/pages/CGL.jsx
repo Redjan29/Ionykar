@@ -24,7 +24,7 @@ export default function CGL() {
           }}
         >
           <a
-            href="/cgl-ionykar-v6.pdf"
+            href="/cgl-ionykar-v7.pdf"
             target="_blank"
             rel="noreferrer"
             style={{
@@ -35,15 +35,15 @@ export default function CGL() {
               borderRadius: 12,
               background: "var(--ik-yellow)",
               color: "var(--ik-black)",
-              fontWeight: 700,
+              fontWeight: 800,
               textDecoration: "none",
               boxShadow: "0 12px 26px rgba(252, 190, 12, 0.18)",
             }}
           >
-            Télécharger le PDF (CGL V6)
+            Télécharger le PDF (CGL V7)
           </a>
           <span style={{ color: "var(--ik-muted-2)", fontSize: 13 }}>
-            Document: « CGL IonyKar SAS V6 »
+            Document: « CGL IonyKar V7 »
           </span>
         </div>
 
@@ -59,7 +59,7 @@ export default function CGL() {
         >
           <iframe
             title="CGL IonyKar"
-            src="/cgl-ionykar-v6.pdf"
+            src="/cgl-ionykar-v7.pdf"
             style={{ width: "100%", height: "75vh", border: "none" }}
           />
         </div>

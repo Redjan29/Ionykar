@@ -68,9 +68,12 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 16px;
+  color: #111827;
   line-height: 1;
   padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .password-toggle:disabled {
@@ -102,6 +105,47 @@
 .auth-button:disabled {
   background: #9ca3af;
   cursor: not-allowed;
+}
+
+.auth-consents {
+  margin-top: 4px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.auth-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #111827;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.auth-consent input {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ik-yellow);
+}
+
+.auth-consent-link {
+  color: #111827;
+  font-weight: 800;
+  text-decoration: underline;
+  margin-left: 4px;
+}
+
+.auth-consent-required {
+  margin-left: 6px;
+  color: #b45309;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .auth-footer {

@@ -12,6 +12,30 @@ export default function Signup() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  const EyeIcon = ({ off = false }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M2.5 12s3.5-7 9.5-7 9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 15.2a3.2 3.2 0 1 0-3.2-3.2A3.2 3.2 0 0 0 12 15.2Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      {off ? (
+        <path
+          d="M4 20 20 4"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      ) : null}
+    </svg>
+  );
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -20,6 +44,11 @@ export default function Signup() {
     phone: "",
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [consents, setConsents] = useState({
+    marketing: false,
+    cgl: false,
+    privacy: false,
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -31,8 +60,22 @@ export default function Signup() {
     setError("");
   };
 
+  const toggleConsent = (key) => {
+    setConsents((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const hasRequiredConsents = Boolean(consents.cgl && consents.privacy);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!hasRequiredConsents) {
+      setError(
+        language === "fr"
+          ? "Veuillez accepter les Conditions générales et la Politique de confidentialité."
+          : "Please accept the Terms and the Privacy policy."
+      );
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -152,10 +195,58 @@ export default function Signup() {
                       : "Show password"
                   }
                 >
-                  {showPassword ? "🙈" : "👁"}
+                  {showPassword ? <EyeIcon off /> : <EyeIcon />}
                 </button>
               </div>
             </label>
+
+            <div className="auth-consents" role="group" aria-label="Consentements">
+              <label className="auth-consent">
+                <input
+                  type="checkbox"
+                  checked={consents.marketing}
+                  onChange={() => toggleConsent("marketing")}
+                  disabled={loading}
+                />
+                <span>
+                  {language === "fr"
+                    ? "J'accepte de recevoir des communications (optionnel)"
+                    : "I agree to receive communications (optional)"}
+                </span>
+              </label>
+
+              <label className="auth-consent">
+                <input
+                  type="checkbox"
+                  checked={consents.cgl}
+                  onChange={() => toggleConsent("cgl")}
+                  disabled={loading}
+                />
+                <span>
+                  {language === "fr" ? "J'ai lu et j'accepte les " : "I have read and accept the "}
+                  <Link className="auth-consent-link" to="/cgl" target="_blank" rel="noreferrer">
+                    {language === "fr" ? "Conditions générales" : "Terms"}
+                  </Link>
+                </span>
+                <span className="auth-consent-required">{language === "fr" ? "(obligatoire)" : "(required)"}</span>
+              </label>
+
+              <label className="auth-consent">
+                <input
+                  type="checkbox"
+                  checked={consents.privacy}
+                  onChange={() => toggleConsent("privacy")}
+                  disabled={loading}
+                />
+                <span>
+                  {language === "fr" ? "J'ai lu et j'accepte la " : "I have read and accept the "}
+                  <Link className="auth-consent-link" to="/politique-confidentialite" target="_blank" rel="noreferrer">
+                    {language === "fr" ? "politique de confidentialité" : "privacy policy"}
+                  </Link>
+                </span>
+                <span className="auth-consent-required">{language === "fr" ? "(obligatoire)" : "(required)"}</span>
+              </label>
+            </div>
             <button type="submit" className="auth-button" disabled={loading}>
               {loading
                 ? language === "fr"

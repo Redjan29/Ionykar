@@ -12,6 +12,30 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const EyeIcon = ({ off = false }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M2.5 12s3.5-7 9.5-7 9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 15.2a3.2 3.2 0 1 0-3.2-3.2A3.2 3.2 0 0 0 12 15.2Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      {off ? (
+        <path
+          d="M4 20 20 4"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      ) : null}
+    </svg>
+  );
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -94,7 +118,7 @@ export default function Login() {
                       : "Show password"
                   }
                 >
-                  {showPassword ? "🙈" : "👁"}
+                  {showPassword ? <EyeIcon off /> : <EyeIcon />}
                 </button>
               </div>
             </label>

@@ -2,7 +2,10 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/Logo_2.png" sizes="32x32" />
+    <link rel="shortcut icon" href="/Logo_2.png" />
+    <link rel="apple-touch-icon" href="/Logo_2.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <!-- SEO Meta Tags -->
@@ -20,11 +23,13 @@
     <meta property="og:url" content="https://www.ionykar.fr" />
     <meta property="og:locale" content="fr_FR" />
     <meta property="og:site_name" content="IonyKar" />
+    <meta property="og:image" content="https://www.ionykar.fr/Logo_2.png" />
     
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Location de voiture Paris 12 Bastille — IonyKar" />
     <meta name="twitter:description" content="Réservation 24h/24 7j/7, paiement sécurisé et documents automatisés." />
+    <meta name="twitter:image" content="https://www.ionykar.fr/Logo_2.png" />
     
     <!-- Geo Meta Tags -->
     <meta name="geo.region" content="FR" />
@@ -74,6 +79,80 @@
         "closes": "23:59"
       },
       "sameAs": []
+    }
+    </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "AutoRental",
+      "name": "IonyKar",
+      "url": "https://www.ionykar.fr",
+      "image": "https://www.ionykar.fr/Logo_2.png",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Paris",
+        "postalCode": "75012",
+        "addressCountry": "FR"
+      },
+      "areaServed": "Paris 12e — Bastille"
+    }
+    </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Quel est le prix moyen d'une location de voiture ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Le prix d'une location varie selon le véhicule et la période. Le tarif affiché est calculé automatiquement pour vos dates."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Quelles sont les conditions pour louer une voiture ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Pour louer un véhicule, vous devez avoir au minimum 21 ans, être titulaire d'un permis de conduire depuis au moins 3 ans, et fournir les documents demandés lors de la création du compte."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Puis-je annuler ma réservation de location de voiture ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Oui, l'annulation de votre location de voiture est gratuite jusqu'à 24 heures avant la date de départ prévue. Vous pouvez modifier ou annuler votre réservation depuis votre compte client ou en contactant le support."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "L'assurance est-elle incluse dans le prix de location ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Oui, les locations incluent une assurance tous risques. Les conditions détaillées figurent dans les CGL."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Où puis-je récupérer ma voiture de location ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "La récupération se fait depuis nos stations à Paris 12e (Bastille). Les informations de départ sont envoyées automatiquement avant le début de la location."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Le kilométrage est-il limité pour la location ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Le kilométrage inclus est précisé dans le contrat de location. Les kilomètres supplémentaires peuvent être facturés selon les CGL."
+          }
+        }
+      ]
     }
     </script>
   </head>

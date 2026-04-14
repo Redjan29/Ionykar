@@ -18,6 +18,14 @@ const carSchema = new mongoose.Schema(
       trim: true,
       maxlength: 100,
     },
+    slug: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      maxlength: 140,
+      index: true,
+    },
     category: {
       type: String,
       enum: ["CITADINE", "BREAK", "BERLINE", "SUV", "LUXE"],

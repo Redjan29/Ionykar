@@ -18,3 +18,27 @@ export function updateProfile(profileData) {
     body: JSON.stringify(profileData),
   });
 }
+
+export async function uploadMyDocument(docType, file) {
+  const token = localStorage.getItem("car_rental_token");
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(
+    `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/api/users/documents/${encodeURIComponent(
+      docType
+    )}`,
+    {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    }
+  );
+
+  const json = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message = json?.error?.message || json?.message || "Upload failed";
+    throw new Error(message);
+  }
+  return json?.data || json;
+}

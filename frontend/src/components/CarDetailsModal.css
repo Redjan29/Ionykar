@@ -1,0 +1,325 @@
+.ik-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.68);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 1200;
+}
+
+.ik-modal {
+  width: min(1120px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(18, 18, 18, 0.96);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.6);
+}
+
+.ik-modal-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(18, 18, 18, 0.92);
+}
+
+.ik-modal-title-main {
+  font-family: var(--ik-font-title);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.ik-modal-title-sub {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+}
+
+.ik-modal-close {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ik-white);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.ik-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.ik-modal-state {
+  padding: 18px 16px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.ik-modal-error {
+  color: #ffb4b4;
+}
+
+.ik-modal-body {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 18px;
+  padding: 16px;
+}
+
+.ik-modal-body-booking {
+  grid-template-columns: 1fr;
+}
+
+.ik-modal-media {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ik-modal-image-frame {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.ik-modal-image {
+  width: 100%;
+  height: 520px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+}
+
+.ik-media-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 60% at 70% 45%, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.65) 80%),
+    linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.78) 100%);
+}
+
+.ik-media-title {
+  font-family: var(--ik-font-title);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  text-shadow: 0 10px 26px rgba(0, 0, 0, 0.75);
+}
+
+.ik-media-subtitle {
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+  font-weight: 700;
+  text-shadow: 0 10px 26px rgba(0, 0, 0, 0.75);
+}
+
+.ik-media-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ik-icon-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.42);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  font-weight: 800;
+  backdrop-filter: blur(10px);
+  text-shadow: 0 10px 22px rgba(0, 0, 0, 0.7);
+}
+
+.ik-modal-thumbs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ik-modal-thumb-btn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 12px;
+}
+
+.ik-modal-thumb-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(252, 190, 12, 0.18);
+}
+
+.ik-modal-thumb {
+  width: 74px;
+  height: 74px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  object-fit: cover;
+  display: block;
+}
+
+.ik-modal-thumb-btn.active .ik-modal-thumb {
+  border-color: rgba(252, 190, 12, 0.9);
+}
+
+.ik-modal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ik-modal-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ik-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.ik-modal-specs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ik-spec {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+  padding: 12px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.ik-modal-block {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.ik-modal-block-title {
+  font-family: var(--ik-font-title);
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.ik-modal-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.ik-muted {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+}
+
+.ik-accordion {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  padding: 12px 14px;
+}
+
+.ik-accordion summary {
+  cursor: pointer;
+  font-family: var(--ik-font-title);
+  font-weight: 800;
+}
+
+.ik-accordion-body {
+  margin-top: 12px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.ik-feature-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.ik-modal-price {
+  margin-top: auto;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 18px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 6px 12px;
+  align-items: center;
+}
+
+.ik-price-total {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.ik-price-sub {
+  grid-column: 1 / 2;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ik-cta {
+  grid-column: 2 / 3;
+  grid-row: 1 / 3;
+  height: 44px;
+  border-radius: 999px;
+  border: none;
+  background: var(--ik-yellow);
+  color: var(--ik-black);
+  font-weight: 900;
+  padding: 0 18px;
+  cursor: pointer;
+  box-shadow: 0 14px 34px rgba(252, 190, 12, 0.24);
+}
+
+.ik-cta:hover {
+  filter: brightness(0.97);
+}
+
+@media (max-width: 980px) {
+  .ik-modal-body {
+    grid-template-columns: 1fr;
+  }
+
+  .ik-modal-image {
+    height: 420px;
+  }
+}
+

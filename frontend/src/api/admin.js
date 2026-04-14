@@ -51,6 +51,16 @@ export function updateUser(token, userId, updates) {
   });
 }
 
+export function reviewUserDocument(token, userId, docType, payload) {
+  return apiFetch(`/api/admin/users/${userId}/documents/${docType}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 // Lister toutes les voitures (admin)
 export function getAllCars(token) {
   return apiFetch("/api/admin/cars", {

@@ -1,5 +1,5 @@
 // src/pages/LandingPage.jsx
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { fetchCars } from "../api/cars";
 import CarCard from "../components/CarCard";
@@ -9,7 +9,6 @@ import BackToTop from "../components/BackToTop.jsx";
 import "./LandingPage.css";
 
 export default function LandingPage() {
-  const navigate = useNavigate();
   const [featuredCars, setFeaturedCars] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +28,7 @@ export default function LandingPage() {
   };
   
   const [searchParams, setSearchParams] = useState({
+    station: "bastille",
     startDate: formatDate(today),
     startTime: "09:00",
     endDate: formatDate(threeDaysLater),
@@ -54,6 +54,7 @@ export default function LandingPage() {
   // Fonction pour construire l'URL avec les dates
   const buildUrlWithDates = (basePath) => {
     const params = new URLSearchParams({
+      station: searchParams.station,
       startDate: searchParams.startDate,
       startTime: searchParams.startTime,
       endDate: searchParams.endDate,
@@ -151,6 +152,16 @@ export default function LandingPage() {
           {/* Barre de recherche */}
           <div className="search-bar-container">
             <div className="search-bar">
+              <div className="search-field">
+                <label>Station</label>
+                <select
+                  name="station"
+                  value={searchParams.station}
+                  onChange={handleSearchChange}
+                >
+                  <option value="bastille">Paris 12e — Bastille</option>
+                </select>
+              </div>
               <div className="search-field">
                 <label>Date de départ</label>
                 <input
@@ -373,97 +384,74 @@ export default function LandingPage() {
       </section>
 
       {/* Notre flotte */}
-      <section className="fleet-section">
-        <div className="container">
-          <h2>Notre flotte de voitures à louer</h2>
-          <p className="section-intro">
-            Découvrez notre sélection de véhicules disponibles à la location. Du
-            véhicule économique pour vos trajets quotidiens jusqu'à la voiture de luxe
-            pour vos occasions spéciales, trouvez la voiture idéale pour votre
-            location.
-          </p>
+      {/* (sections "Notre flotte" et "Témoignages" retirées à ta demande) */}
 
-          <div className="categories-grid">
-            <div className="category-card">
-              <h3>🏙️ Citadines</h3>
-              <p>
-                Parfaites pour la ville et les courtes distances. Louez une citadine
-                économique et facile à garer pour vos déplacements urbains. Location à
-                partir de 25€/jour.
+      {/* Nos véhicules (aperçu) */}
+      <section className="vehicles-preview-section">
+        <div className="container">
+          <div className="section-header-row">
+            <div>
+              <h2>Nos véhicules</h2>
+              <p className="section-intro">
+                Un aperçu de véhicules disponibles. Consultez chaque fiche pour voir les
+                caractéristiques et réserver.
               </p>
-              <Link to="/cars?category=CITADINE">Voir les citadines</Link>
             </div>
-            <div className="category-card">
-              <h3>🚗 Berlines</h3>
-              <p>
-                Confort et élégance pour vos voyages d'affaires ou déplacements
-                professionnels. Location de berline spacieuse avec équipements haut de
-                gamme. À partir de 45€/jour.
-              </p>
-              <Link to="/cars?category=BERLINE">Voir les berlines</Link>
-            </div>
+            <Link to={buildUrlWithDates("/cars")} className="btn-primary btn-primary-compact">
+              Voir tous les véhicules
+            </Link>
           </div>
 
-          {!loading && featuredCars.length > 0 && (
-            <div className="featured-cars">
-              <h3>Voitures en vedette - Disponibles maintenant</h3>
-              <div className="cars-showcase">
-                {featuredCars.map((car) => (
-                  <CarCard key={car._id} {...car} searchParams={searchParams} />
-                ))}
-              </div>
-              <div className="cta-center">
-                <Link to={buildUrlWithDates("/cars")} className="btn-primary">
-                  Voir toutes les voitures disponibles
-                </Link>
-              </div>
+          {!loading && featuredCars.length > 0 ? (
+            <div className="vehicles-preview-grid">
+              {featuredCars.slice(0, 4).map((car) => (
+                <CarCard key={car._id || car.slug} {...car} searchParams={searchParams} />
+              ))}
+            </div>
+          ) : (
+            <div className="vehicles-preview-empty">
+              {loading ? "Chargement..." : "Aucun véhicule à afficher pour le moment."}
             </div>
           )}
         </div>
       </section>
 
-      {/* Témoignages */}
-      <section className="testimonials-section">
+      {/* Nos stations (carte + liste) */}
+      <section className="stations-home-section">
         <div className="container">
-          <h2>Ce que nos clients disent d'IonyKar</h2>
-          <p className="section-intro">
-            Découvrez leurs avis sur notre service de location de véhicule.
-          </p>
-          <div className="testimonials-grid">
-            <div className="testimonial-card">
-              <div className="stars">⭐⭐⭐⭐⭐</div>
-              <p className="testimonial-text">
-                "Excellente expérience de location de voiture ! Prix transparent,
-                véhicule impeccable et personnel très professionnel. Je recommande
-                IonyKar pour louer une voiture sans stress."
+          <div className="section-header-row">
+            <div>
+              <h2>Nos stations</h2>
+              <p className="section-intro">
+                Retrait et retour depuis nos stations à Paris 12e (Bastille).
               </p>
-              <div className="testimonial-author">
-                <strong>Sophie Martin</strong>
-                <span>Paris - Location Peugeot 308</span>
-              </div>
             </div>
-            <div className="testimonial-card">
-              <div className="stars">⭐⭐⭐⭐⭐</div>
-              <p className="testimonial-text">
-                "Meilleur rapport qualité-prix pour une location de voiture. Réservation
-                en ligne super rapide, voiture propre et récente. Parfait pour mes
-                voyages d'affaires réguliers."
-              </p>
-              <div className="testimonial-author">
-                <strong>Thomas Dubois</strong>
-                <span>Lyon - Location Renault Mégane</span>
-              </div>
+            <Link to="/stations" className="btn-secondary btn-secondary-compact">
+              Voir les stations
+            </Link>
+          </div>
+
+          <div className="stations-grid">
+            <div className="stations-map">
+              <iframe
+                title="Carte des stations IonyKar"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                src="https://www.google.com/maps?q=Bastille%20Paris%2012&output=embed"
+              />
             </div>
-            <div className="testimonial-card">
-              <div className="stars">⭐⭐⭐⭐⭐</div>
-              <p className="testimonial-text">
-                "Service client au top ! J'ai loué un SUV pour mes vacances en famille.
-                Véhicule spacieux, confortable et économique. La location avec IonyKar
-                était vraiment facile."
-              </p>
-              <div className="testimonial-author">
-                <strong>Marie Lefebvre</strong>
-                <span>Marseille - Location Nissan Qashqai</span>
+
+            <div className="stations-list">
+              <div className="station-card">
+                <div className="station-card-title">Paris 12e — Bastille</div>
+                <div className="station-card-meta">Station principale</div>
+                <div className="station-card-line">Accès facile, informations envoyées avant départ.</div>
+              </div>
+              <div className="station-card station-card-muted">
+                <div className="station-card-title">Autres stations</div>
+                <div className="station-card-line">
+                  À venir: ajout des stations d’autopartage sur la carte et sur la page dédiée.
+                </div>
               </div>
             </div>
           </div>
@@ -529,6 +517,30 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Avis clients */}
+      <section className="reviews-section">
+        <div className="container">
+          <h2>Avis clients</h2>
+          <p className="section-intro">
+            Nous n’affichons pas de faux avis. Quand tu voudras, on pourra connecter des avis
+            réels (Google Business Profile) ou un module dédié.
+          </p>
+          <div className="reviews-cta-row">
+            <a
+              className="btn-primary btn-primary-compact"
+              href="https://www.google.com/search?q=IonyKar+Bastille+avis"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Voir les avis Google
+            </a>
+            <Link className="btn-secondary btn-secondary-compact" to="/stations">
+              Nos stations
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Section Contact */}
       <section className="contact-section" id="contact">
         <div className="container">
@@ -544,7 +556,8 @@ export default function LandingPage() {
               <div className="contact-info-card">
                 <div className="contact-icon">📞</div>
                 <h3>Téléphone</h3>
-                <p>0612193050</p>
+                <p>+33 6 13 65 76 87</p>
+                <p>+33 6 12 19 30 50</p>
                 <p className="contact-hours">Du lundi au dimanche, 8h - 22h</p>
               </div>
 

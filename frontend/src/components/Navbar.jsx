@@ -5,7 +5,7 @@ import "./Navbar.css";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
-export default function Navbar() {
+export default function Navbar({ authDisabled = false }) {
   const { currency, setCurrency, language, setLanguage } = useAppContext();
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
@@ -18,6 +18,53 @@ export default function Navbar() {
 
   const languageLabel = language === "fr" ? "Français" : "English";
   const currencyLabel = currency === "EUR" ? "Euro (€)" : "Dollar ($)";
+  const languageCode = language === "fr" ? "FR" : "EN";
+  const currencyCode = currency === "EUR" ? "€" : "$";
+
+  const GlobeIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M2 12h20"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 2c3 2.8 3 16.2 0 20"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 2c-3 2.8-3 16.2 0 20"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+
+  const CurrencyIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M19 7H8.8a4.8 4.8 0 1 0 0 9.6H19"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M15 10h6M15 14h6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 
   const accountTarget = useMemo(() => {
     if (isAuthenticated) return "/profile";
@@ -34,35 +81,19 @@ export default function Navbar() {
       {/* Logo */}
       <div className="navbar-left">
         <Link to={logoTarget} className="navbar-logo-link">
-          <img
-            src="/logo.png"
-            alt="IonyKar"
-            className="navbar-logo-img"
-            onError={(event) => {
-              event.currentTarget.style.display = "none";
-            }}
-          />
-          <span className="navbar-logo-text">IonyKar</span>
+          <span className="navbar-logo-mark">
+            <img
+              src="/logo.png"
+              alt="IonyKar"
+              className="navbar-logo-img"
+              onError={(event) => {
+                event.currentTarget.style.display = "none";
+              }}
+            />
+          </span>
         </Link>
       </div>
 
-      <nav className="navbar-nav" aria-label="Navigation principale">
-        <Link to="/" className="navbar-nav-link">
-          {language === "fr" ? "Accueil" : "Home"}
-        </Link>
-        <Link to="/cars" className="navbar-nav-link">
-          {language === "fr" ? "Nos Véhicules" : "Vehicles"}
-        </Link>
-        <Link to="/stations" className="navbar-nav-link">
-          {language === "fr" ? "Nos Stations" : "Stations"}
-        </Link>
-        <Link to="/cgl" className="navbar-nav-link">
-          {language === "fr" ? "Conditions de location" : "Rental terms"}
-        </Link>
-        <Link to={accountTarget} className="navbar-nav-link">
-          {language === "fr" ? "Mon Compte" : "My account"}
-        </Link>
-      </nav>
 
       {/* Droite : langue, monnaie, connexion, inscription */}
       <div className="navbar-right">
@@ -74,10 +105,20 @@ export default function Navbar() {
           type="button"
           className="locale-trigger"
           onClick={() => setLocaleModalOpen(true)}
+          aria-label={`${languageLabel} / ${currencyLabel}`}
         >
-          <span>{languageLabel}</span>
-          <span className="locale-trigger-separator">|</span>
-          <span>{currencyLabel}</span>
+          <span className="locale-pill" title={languageLabel}>
+            <span className="locale-pill-icon">
+              <GlobeIcon />
+            </span>
+            <span className="locale-pill-code">{languageCode}</span>
+          </span>
+          <span className="locale-pill" title={currencyLabel}>
+            <span className="locale-pill-icon">
+              <CurrencyIcon />
+            </span>
+            <span className="locale-pill-code">{currencyCode}</span>
+          </span>
         </button>
 
         {/* Auth */}
@@ -120,12 +161,25 @@ export default function Navbar() {
           </>
         ) : (
           <>
-            <Link to="/login" className="navbar-link">
-              {language === "fr" ? "Connexion" : "Log in"}
-            </Link>
-            <Link to="/signup" className="navbar-button">
-              {language === "fr" ? "Inscription" : "Sign up"}
-            </Link>
+            {authDisabled ? (
+              <>
+                <span className="navbar-link navbar-link-disabled" aria-disabled="true">
+                  {language === "fr" ? "Connexion" : "Log in"}
+                </span>
+                <span className="navbar-button navbar-button-disabled" aria-disabled="true">
+                  {language === "fr" ? "Inscription" : "Sign up"}
+                </span>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="navbar-link">
+                  {language === "fr" ? "Connexion" : "Log in"}
+                </Link>
+                <Link to="/signup" className="navbar-button">
+                  {language === "fr" ? "Inscription" : "Sign up"}
+                </Link>
+              </>
+            )}
           </>
         )}
       </div>

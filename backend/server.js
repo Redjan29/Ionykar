@@ -74,8 +74,9 @@ app.use(helmet());
 app.use(cors(corsOptions));
 
 // Body parser with size limits (MUST be before mongoSanitize)
-app.use(express.json({ limit: "10kb" }));
-app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+// NOTE: documents are uploaded via multipart/form-data (multer) to avoid large JSON payloads.
+app.use(express.json({ limit: "200kb" }));
+app.use(express.urlencoded({ extended: true, limit: "200kb" }));
 
 // Data sanitization against NoSQL injection (AFTER body parser)
 app.use((req, res, next) => {

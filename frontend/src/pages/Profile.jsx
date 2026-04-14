@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getProfile, updateProfile } from "../api/users";
+import { getProfile, updateProfile, uploadMyDocument } from "../api/users";
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer.jsx";
@@ -15,6 +15,7 @@ export default function Profile() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [kyc, setKyc] = useState({});
   const [formData, setFormData] = useState({
     phone: "",
     street: "",
@@ -50,19 +51,34 @@ export default function Profile() {
     }
   }, [isAuthenticated]);
 
+  const hasPendingDocs = useMemo(() => {
+    const docTypes = ["driverLicensePhoto", "proofOfResidence"];
+    return docTypes.some((t) => String(kyc?.[t]?.status || "").toUpperCase() === "PENDING");
+  }, [kyc]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    if (!hasPendingDocs) return undefined;
+    const intervalId = setInterval(() => {
+      loadProfile();
+    }, 8000);
+    return () => clearInterval(intervalId);
+  }, [hasPendingDocs, isAuthenticated]);
+
   const loadProfile = async () => {
     try {
       const profile = await getProfile();
+      setKyc(profile.kyc || {});
       setFormData({
         phone: profile.phone || "",
         street: profile.address?.street || "",
         city: profile.address?.city || "",
         zipCode: profile.address?.zipCode || "",
         country: profile.address?.country || "France",
-        profilePhoto: profile.profilePhoto || "",
-        driverLicensePhoto: profile.driverLicensePhoto || "",
-        selfieWithLicense: profile.selfieWithLicense || "",
-        proofOfResidence: profile.proofOfResidence || "",
+        profilePhoto: profile.kyc?.profilePhoto?.url || profile.profilePhoto || "",
+        driverLicensePhoto: profile.kyc?.driverLicensePhoto?.url || profile.driverLicensePhoto || "",
+        selfieWithLicense: profile.kyc?.selfieWithLicense?.url || profile.selfieWithLicense || "",
+        proofOfResidence: profile.kyc?.proofOfResidence?.url || profile.proofOfResidence || "",
         licenseObtainedDate: profile.licenseObtainedDate 
           ? new Date(profile.licenseObtainedDate).toISOString().split("T")[0] 
           : "",
@@ -73,10 +89,10 @@ export default function Profile() {
       });
 
       setFileNames({
-        profilePhoto: profile.profilePhoto ? "Fichier déjà enregistré" : "",
-        driverLicensePhoto: profile.driverLicensePhoto ? "Fichier déjà enregistré" : "",
-        selfieWithLicense: profile.selfieWithLicense ? "Fichier déjà enregistré" : "",
-        proofOfResidence: profile.proofOfResidence ? "Fichier déjà enregistré" : "",
+        profilePhoto: (profile.kyc?.profilePhoto?.url || profile.profilePhoto) ? "Fichier déjà enregistré" : "",
+        driverLicensePhoto: (profile.kyc?.driverLicensePhoto?.url || profile.driverLicensePhoto) ? "Fichier déjà enregistré" : "",
+        selfieWithLicense: (profile.kyc?.selfieWithLicense?.url || profile.selfieWithLicense) ? "Fichier déjà enregistré" : "",
+        proofOfResidence: (profile.kyc?.proofOfResidence?.url || profile.proofOfResidence) ? "Fichier déjà enregistré" : "",
       });
     } catch (err) {
       error("Erreur lors du chargement du profil");
@@ -103,14 +119,6 @@ export default function Profile() {
     }
   };
 
-  const toBase64 = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-    });
-
   const handleFileChange = async (event, fieldName) => {
     const file = event.target.files?.[0];
     if (!file) {
@@ -123,11 +131,47 @@ export default function Profile() {
     }
 
     try {
-      const encodedFile = await toBase64(file);
-      setFormData((prev) => ({ ...prev, [fieldName]: encodedFile }));
+      const updated = await uploadMyDocument(fieldName, file);
+      const url = updated?.kyc?.[fieldName]?.url || "";
+      setFormData((prev) => ({ ...prev, [fieldName]: url }));
+      setKyc(updated?.kyc || {});
       setFileNames((prev) => ({ ...prev, [fieldName]: file.name }));
+      success("Document envoyé. En attente de validation admin.");
     } catch {
-      error("Impossible de lire le fichier sélectionné.");
+      error("Impossible d'envoyer le document. Vérifiez la taille et réessayez.");
+    }
+  };
+
+  const docMeta = (docType) => {
+    const doc = kyc?.[docType] || {};
+    const status = String(doc.status || (doc.url ? "PENDING" : "MISSING")).toUpperCase();
+    const rejectedReason = doc.rejectedReason || "";
+    return { status, rejectedReason };
+  };
+
+  const kycStatusLabel = (status) => {
+    switch (status) {
+      case "APPROVED":
+        return "Validé";
+      case "PENDING":
+        return "En attente";
+      case "REJECTED":
+        return "Refusé";
+      default:
+        return "Manquant";
+    }
+  };
+
+  const statusColor = (status) => {
+    switch (status) {
+      case "APPROVED":
+        return "#047857";
+      case "PENDING":
+        return "#1d4ed8";
+      case "REJECTED":
+        return "#b91c1c";
+      default:
+        return "#6b7280";
     }
   };
 
@@ -135,7 +179,20 @@ export default function Profile() {
     if (!value) return "";
     if (value.startsWith("data:image/")) return value;
     if (value.startsWith("http://") || value.startsWith("https://")) return value;
+    if (value.startsWith("/uploads/")) return `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}${value}`;
     return "";
+  };
+
+  const getFileUrl = (value) => {
+    if (!value) return "";
+    if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("data:")) return value;
+    if (value.startsWith("/uploads/")) return `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}${value}`;
+    return "";
+  };
+
+  const isPdfUrl = (value) => {
+    const url = String(value || "").toLowerCase();
+    return url.includes(".pdf") || url.startsWith("data:application/pdf");
   };
 
   const handleSubmit = async (e) => {
@@ -151,10 +208,6 @@ export default function Profile() {
           zipCode: formData.zipCode,
           country: formData.country,
         },
-        profilePhoto: formData.profilePhoto,
-        driverLicensePhoto: formData.driverLicensePhoto,
-        selfieWithLicense: formData.selfieWithLicense,
-        proofOfResidence: formData.proofOfResidence,
         licenseObtainedDate: formData.licenseObtainedDate || undefined,
         licenseExpiry: formData.licenseExpiry || undefined,
         licenseNumber: formData.licenseNumber,
@@ -198,6 +251,16 @@ export default function Profile() {
           <p className="profile-subtitle">
             Gérez vos informations personnelles
           </p>
+          <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+            <button
+              type="button"
+              className="btn-save"
+              style={{ width: "auto", padding: "10px 14px", boxShadow: "none" }}
+              onClick={loadProfile}
+            >
+              Rafraîchir le statut des documents
+            </button>
+          </div>
 
           <form onSubmit={handleSubmit} className="profile-form">
             {/* Photo de profil */}
@@ -205,13 +268,25 @@ export default function Profile() {
               <h2>Photo de profil</h2>
               <div className="form-group">
                 <label htmlFor="profilePhoto">Importer une photo de profil</label>
-                <input
-                  type="file"
-                  id="profilePhoto"
-                  name="profilePhoto"
-                  accept="image/*"
-                  onChange={(event) => handleFileChange(event, "profilePhoto")}
-                />
+                <div
+                  style={{
+                    marginBottom: 8,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: statusColor(docMeta("profilePhoto").status),
+                  }}
+                >
+                  Statut: {kycStatusLabel(docMeta("profilePhoto").status)}
+                </div>
+                {docMeta("profilePhoto").status === "APPROVED" ? null : (
+                  <input
+                    type="file"
+                    id="profilePhoto"
+                    name="profilePhoto"
+                    accept="image/*"
+                    onChange={(event) => handleFileChange(event, "profilePhoto")}
+                  />
+                )}
                 {fileNames.profilePhoto && (
                   <small className="form-hint">Fichier: {fileNames.profilePhoto}</small>
                 )}
@@ -222,6 +297,16 @@ export default function Profile() {
                     alt="Aperçu photo de profil"
                   />
                 )}
+                {!getImagePreview(formData.profilePhoto) && getFileUrl(formData.profilePhoto) ? (
+                  <a
+                    href={getFileUrl(formData.profilePhoto)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="profile-doc-link"
+                  >
+                    Voir le document
+                  </a>
+                ) : null}
                 <small className="form-hint">
                   Sélectionnez une image depuis votre téléphone ou ordinateur (optionnel)
                 </small>
@@ -340,13 +425,23 @@ export default function Profile() {
                 <label htmlFor="driverLicensePhoto">
                   Photo du permis de conduire
                 </label>
-                <input
-                  type="file"
-                  id="driverLicensePhoto"
-                  name="driverLicensePhoto"
-                  accept="image/*"
-                  onChange={(event) => handleFileChange(event, "driverLicensePhoto")}
-                />
+                <div style={{ marginBottom: 8, fontSize: 13, fontWeight: 700, color: statusColor(docMeta("driverLicensePhoto").status) }}>
+                  Statut: {kycStatusLabel(docMeta("driverLicensePhoto").status)}
+                </div>
+                {docMeta("driverLicensePhoto").status === "REJECTED" && docMeta("driverLicensePhoto").rejectedReason ? (
+                  <div style={{ marginBottom: 10, color: "#b91c1c", fontWeight: 700 }}>
+                    Raison: {docMeta("driverLicensePhoto").rejectedReason}
+                  </div>
+                ) : null}
+                {docMeta("driverLicensePhoto").status === "APPROVED" ? null : (
+                  <input
+                    type="file"
+                    id="driverLicensePhoto"
+                    name="driverLicensePhoto"
+                    accept="image/*"
+                    onChange={(event) => handleFileChange(event, "driverLicensePhoto")}
+                  />
+                )}
                 {fileNames.driverLicensePhoto && (
                   <small className="form-hint">Fichier: {fileNames.driverLicensePhoto}</small>
                 )}
@@ -357,6 +452,16 @@ export default function Profile() {
                     alt="Aperçu permis de conduire"
                   />
                 )}
+                {!getImagePreview(formData.driverLicensePhoto) && getFileUrl(formData.driverLicensePhoto) ? (
+                  <a
+                    href={getFileUrl(formData.driverLicensePhoto)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="profile-doc-link"
+                  >
+                    Voir le document
+                  </a>
+                ) : null}
                 <small className="form-hint">
                   Ajoutez une photo claire du permis (optionnel)
                 </small>
@@ -370,14 +475,24 @@ export default function Profile() {
                 <label htmlFor="selfieWithLicense">
                   Selfie avec permis en main
                 </label>
-                <input
-                  type="file"
-                  id="selfieWithLicense"
-                  name="selfieWithLicense"
-                  accept="image/*"
-                  capture="user"
-                  onChange={(event) => handleFileChange(event, "selfieWithLicense")}
-                />
+                <div style={{ marginBottom: 8, fontSize: 13, fontWeight: 700, color: statusColor(docMeta("selfieWithLicense").status) }}>
+                  Statut: {kycStatusLabel(docMeta("selfieWithLicense").status)}
+                </div>
+                {docMeta("selfieWithLicense").status === "REJECTED" && docMeta("selfieWithLicense").rejectedReason ? (
+                  <div style={{ marginBottom: 10, color: "#b91c1c", fontWeight: 700 }}>
+                    Raison: {docMeta("selfieWithLicense").rejectedReason}
+                  </div>
+                ) : null}
+                {docMeta("selfieWithLicense").status === "APPROVED" ? null : (
+                  <input
+                    type="file"
+                    id="selfieWithLicense"
+                    name="selfieWithLicense"
+                    accept="image/*"
+                    capture="user"
+                    onChange={(event) => handleFileChange(event, "selfieWithLicense")}
+                  />
+                )}
                 {fileNames.selfieWithLicense && (
                   <small className="form-hint">Fichier: {fileNames.selfieWithLicense}</small>
                 )}
@@ -388,6 +503,16 @@ export default function Profile() {
                     alt="Aperçu selfie avec permis"
                   />
                 )}
+                {!getImagePreview(formData.selfieWithLicense) && getFileUrl(formData.selfieWithLicense) ? (
+                  <a
+                    href={getFileUrl(formData.selfieWithLicense)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="profile-doc-link"
+                  >
+                    Voir le document
+                  </a>
+                ) : null}
                 <small className="form-hint">
                   Prenez ou importez une photo de vous avec votre permis (optionnel)
                 </small>
@@ -401,22 +526,45 @@ export default function Profile() {
                 <label htmlFor="proofOfResidence">
                   Justificatif de domicile
                 </label>
-                <input
-                  type="file"
-                  id="proofOfResidence"
-                  name="proofOfResidence"
-                  accept="image/*,application/pdf"
-                  onChange={(event) => handleFileChange(event, "proofOfResidence")}
-                />
+                <div style={{ marginBottom: 8, fontSize: 13, fontWeight: 700, color: statusColor(docMeta("proofOfResidence").status) }}>
+                  Statut: {kycStatusLabel(docMeta("proofOfResidence").status)}
+                </div>
+                {docMeta("proofOfResidence").status === "REJECTED" && docMeta("proofOfResidence").rejectedReason ? (
+                  <div style={{ marginBottom: 10, color: "#b91c1c", fontWeight: 700 }}>
+                    Raison: {docMeta("proofOfResidence").rejectedReason}
+                  </div>
+                ) : null}
+                {docMeta("proofOfResidence").status === "APPROVED" ? null : (
+                  <input
+                    type="file"
+                    id="proofOfResidence"
+                    name="proofOfResidence"
+                    accept="image/*,application/pdf"
+                    onChange={(event) => handleFileChange(event, "proofOfResidence")}
+                  />
+                )}
                 {fileNames.proofOfResidence && (
                   <small className="form-hint">Fichier: {fileNames.proofOfResidence}</small>
                 )}
-                {getImagePreview(formData.proofOfResidence) && (
-                  <img
-                    className="file-preview-image"
-                    src={getImagePreview(formData.proofOfResidence)}
-                    alt="Aperçu justificatif de domicile"
-                  />
+                {isPdfUrl(formData.proofOfResidence) ? (
+                  getFileUrl(formData.proofOfResidence) ? (
+                    <a
+                      href={getFileUrl(formData.proofOfResidence)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="profile-doc-link"
+                    >
+                      Voir le PDF
+                    </a>
+                  ) : null
+                ) : (
+                  getImagePreview(formData.proofOfResidence) && (
+                    <img
+                      className="file-preview-image"
+                      src={getImagePreview(formData.proofOfResidence)}
+                      alt="Aperçu justificatif de domicile"
+                    />
+                  )
                 )}
                 <small className="form-hint">
                   Ajoutez un document depuis votre appareil (optionnel)
@@ -436,8 +584,8 @@ export default function Profile() {
 
             <div className="profile-note">
               <p>
-                ℹ️ Toutes ces informations sont facultatives. Vous pouvez
-                réserver une voiture même si votre profil n'est pas complet.
+                ℹ️ Pour réserver, vos documents doivent être envoyés et validés
+                manuellement par un administrateur (statut “Validé”).
               </p>
             </div>
           </form>
