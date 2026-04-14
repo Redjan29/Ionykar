@@ -2,6 +2,9 @@ import mongoose from "mongoose";
 import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
+import fsSync from "fs";
+import PDFDocument from "pdfkit";
+import archiver from "archiver";
 import {
   Car,
   Reservation,
@@ -9,6 +12,8 @@ import {
   BlockedPeriod,
   MaintenanceRecord,
   FinanceCharge,
+  Invoice,
+  CreditNote,
 } from "../models/index.js";
 
 const KYC_STATUSES = new Set(["MISSING", "PENDING", "APPROVED", "REJECTED"]);
@@ -479,6 +484,573 @@ export async function getFinanceCharges(req, res, next) {
           : null,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+function getRevenuePeriodBounds({ from, to, year, month }) {
+  if (from || to) {
+    const f = from ? new Date(from) : null;
+    const t = to ? new Date(to) : null;
+    if (f && Number.isNaN(f.getTime())) return null;
+    if (t && Number.isNaN(t.getTime())) return null;
+    return { from: f, to: t };
+  }
+  const bounds = getFinancePeriodBounds({ year, month });
+  if (!bounds) return null;
+  return { from: bounds.start, to: bounds.end };
+}
+
+function toCsv(rows) {
+  const escape = (value) => {
+    const s = value === null || value === undefined ? "" : String(value);
+    if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+  return rows.map((r) => r.map(escape).join(",")).join("\n");
+}
+
+export async function getFinanceRevenueTimeseries(req, res, next) {
+  try {
+    const { granularity = "month", from, to, year, month, carId } = req.query;
+    const period = getRevenuePeriodBounds({ from, to, year, month });
+
+    const filters = {
+      status: { $in: ["CONFIRMED", "ACTIVE", "COMPLETED"] },
+      paymentStatus: { $in: ["PAID"] },
+    };
+
+    if (carId) {
+      if (!mongoose.Types.ObjectId.isValid(carId)) {
+        const err = new Error("Invalid car ID");
+        err.status = 400;
+        throw err;
+      }
+      filters.car = new mongoose.Types.ObjectId(carId);
+    }
+
+    if (period?.from || period?.to) {
+      filters.startDate = {};
+      if (period.from) filters.startDate.$gte = period.from;
+      if (period.to) filters.startDate.$lt = period.to;
+    }
+
+    const unit = ["day", "week", "month"].includes(String(granularity)) ? String(granularity) : "month";
+
+    const points = await Reservation.aggregate([
+      { $match: filters },
+      {
+        $group: {
+          _id: {
+            $dateTrunc: {
+              date: "$startDate",
+              unit,
+              timezone: "Europe/Paris",
+            },
+          },
+          revenue: { $sum: "$totalPrice" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+      {
+        $project: {
+          _id: 0,
+          date: "$_id",
+          revenue: 1,
+          count: 1,
+        },
+      },
+    ]);
+
+    res.json({
+      data: {
+        granularity: unit,
+        period: period ? { from: period.from, to: period.to } : null,
+        points,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function exportFinanceRevenueCsv(req, res, next) {
+  try {
+    const { granularity, from, to, year, month, carId } = req.query;
+    const period = getRevenuePeriodBounds({ from, to, year, month });
+
+    const filters = {
+      status: { $in: ["CONFIRMED", "ACTIVE", "COMPLETED"] },
+      paymentStatus: { $in: ["PAID"] },
+    };
+
+    if (carId) {
+      if (!mongoose.Types.ObjectId.isValid(carId)) {
+        const err = new Error("Invalid car ID");
+        err.status = 400;
+        throw err;
+      }
+      filters.car = new mongoose.Types.ObjectId(carId);
+    }
+
+    if (period?.from || period?.to) {
+      filters.startDate = {};
+      if (period.from) filters.startDate.$gte = period.from;
+      if (period.to) filters.startDate.$lt = period.to;
+    }
+
+    const unit = ["day", "week", "month"].includes(String(granularity)) ? String(granularity) : "month";
+
+    const points = await Reservation.aggregate([
+      { $match: filters },
+      {
+        $group: {
+          _id: {
+            $dateTrunc: {
+              date: "$startDate",
+              unit,
+              timezone: "Europe/Paris",
+            },
+          },
+          revenue: { $sum: "$totalPrice" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const rows = [
+      ["date", "revenue", "reservationsCount"],
+      ...points.map((p) => [
+        p._id ? new Date(p._id).toISOString() : "",
+        Number(p.revenue || 0),
+        Number(p.count || 0),
+      ]),
+    ];
+
+    const csv = toCsv(rows);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="revenue_timeseries.csv"`);
+    res.send(csv);
+  } catch (error) {
+    next(error);
+  }
+}
+
+function nextInvoiceNumber(now = new Date()) {
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const rand = Math.floor(Math.random() * 9000 + 1000);
+  return `IK-${yyyy}${mm}-${rand}`;
+}
+
+function nextCreditNoteNumber(now = new Date()) {
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const rand = Math.floor(Math.random() * 9000 + 1000);
+  return `IK-AV-${yyyy}${mm}-${rand}`;
+}
+
+async function ensureUploadsDir(subdir) {
+  const dir = path.resolve(process.cwd(), "uploads", subdir);
+  await fs.mkdir(dir, { recursive: true });
+  return dir;
+}
+
+async function writeInvoicePdf({ invoice, reservation, user, car }) {
+  const invoicesDir = await ensureUploadsDir("invoices");
+  const filename = `${invoice.invoiceNumber}.pdf`;
+  const filePath = path.join(invoicesDir, filename);
+
+  await new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", margin: 50 });
+    const stream = fsSync.createWriteStream(filePath);
+    stream.on("finish", resolve);
+    stream.on("error", reject);
+    doc.pipe(stream);
+
+    doc.fontSize(20).text("FACTURE", { align: "right" });
+    doc.moveDown(0.3);
+    doc.fontSize(12).text(`N° ${invoice.invoiceNumber}`, { align: "right" });
+    doc.text(`Date: ${new Date(invoice.issuedAt).toLocaleDateString("fr-FR")}`, { align: "right" });
+
+    doc.moveDown(1.5);
+    doc.fontSize(14).text(invoice.meta?.companyName || "IonyKar", { continued: false });
+    if (invoice.meta?.companyAddress) doc.fontSize(10).fillColor("#374151").text(invoice.meta.companyAddress);
+    if (invoice.meta?.companySiret) doc.fontSize(10).fillColor("#374151").text(`SIRET: ${invoice.meta.companySiret}`);
+    doc.fillColor("#000000");
+
+    doc.moveDown(1);
+    doc.fontSize(12).text("Client");
+    doc.fontSize(10).fillColor("#374151").text(
+      `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || user?.email || "Client"
+    );
+    doc.text(user?.email || "");
+    const addr = [user?.address?.street, user?.address?.zipCode, user?.address?.city].filter(Boolean).join(" ");
+    if (addr) doc.text(addr);
+    doc.fillColor("#000000");
+
+    doc.moveDown(1);
+    doc.fontSize(12).text("Détail");
+    doc.moveDown(0.2);
+    const carLabel = car ? `${car.brand || ""} ${car.model || ""}`.trim() : "Véhicule";
+    doc.fontSize(10).fillColor("#111827").text(`${carLabel}`);
+    doc.fillColor("#374151").text(
+      `Période: ${new Date(reservation.startDate).toLocaleDateString("fr-FR")} → ${new Date(reservation.endDate).toLocaleDateString("fr-FR")}`
+    );
+    doc.text(`Prix/jour: ${reservation.pricePerDay}€ — Jours: ${reservation.numberOfDays}`);
+    doc.fillColor("#000000");
+
+    doc.moveDown(1);
+    doc.fontSize(12).text(`Total TTC: ${Number(invoice.amountTotal || 0).toFixed(2)} €`, { align: "right" });
+
+    doc.moveDown(2);
+    doc.fontSize(9).fillColor("#6b7280").text("Merci pour votre confiance.", { align: "center" });
+    doc.end();
+  });
+
+  return { pdfUrl: `/uploads/invoices/${filename}` };
+}
+
+async function writeCreditNotePdf({ creditNote, reservation, user, car, invoice }) {
+  const creditsDir = await ensureUploadsDir("credit-notes");
+  const filename = `${creditNote.creditNoteNumber}.pdf`;
+  const filePath = path.join(creditsDir, filename);
+
+  await new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", margin: 50 });
+    const stream = fsSync.createWriteStream(filePath);
+    stream.on("finish", resolve);
+    stream.on("error", reject);
+    doc.pipe(stream);
+
+    doc.fontSize(20).text("AVOIR", { align: "right" });
+    doc.moveDown(0.3);
+    doc.fontSize(12).text(`N° ${creditNote.creditNoteNumber}`, { align: "right" });
+    doc.text(`Date: ${new Date(creditNote.issuedAt).toLocaleDateString("fr-FR")}`, { align: "right" });
+    if (invoice?.invoiceNumber) doc.text(`Réf facture: ${invoice.invoiceNumber}`, { align: "right" });
+
+    doc.moveDown(1.5);
+    doc.fontSize(14).text("IonyKar");
+
+    doc.moveDown(1);
+    doc.fontSize(12).text("Client");
+    doc.fontSize(10).fillColor("#374151").text(
+      `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || user?.email || "Client"
+    );
+    doc.text(user?.email || "");
+    doc.fillColor("#000000");
+
+    doc.moveDown(1);
+    doc.fontSize(12).text("Détail");
+    const carLabel = car ? `${car.brand || ""} ${car.model || ""}`.trim() : "Véhicule";
+    doc.fontSize(10).fillColor("#111827").text(`${carLabel}`);
+    doc.fillColor("#374151").text(
+      `Période: ${new Date(reservation.startDate).toLocaleDateString("fr-FR")} → ${new Date(reservation.endDate).toLocaleDateString("fr-FR")}`
+    );
+    if (creditNote.reason) doc.text(`Motif: ${creditNote.reason}`);
+    doc.fillColor("#000000");
+
+    doc.moveDown(1);
+    doc.fontSize(12).text(`Montant: ${Number(creditNote.amountTotal || 0).toFixed(2)} €`, { align: "right" });
+
+    doc.moveDown(2);
+    doc.fontSize(9).fillColor("#6b7280").text("Avoir émis par IonyKar.", { align: "center" });
+    doc.end();
+  });
+
+  return { pdfUrl: `/uploads/credit-notes/${filename}` };
+}
+
+export async function listInvoices(req, res, next) {
+  try {
+    const { q, status, from, to, userId } = req.query || {};
+    const filters = {};
+
+    if (status) filters.status = String(status).toUpperCase();
+    if (userId) {
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        const err = new Error("Invalid user ID");
+        err.status = 400;
+        throw err;
+      }
+      filters.user = userId;
+    }
+    if (from || to) {
+      const f = from ? new Date(from) : null;
+      const t = to ? new Date(to) : null;
+      filters.issuedAt = {};
+      if (f) filters.issuedAt.$gte = f;
+      if (t) {
+        t.setHours(23, 59, 59, 999);
+        filters.issuedAt.$lte = t;
+      }
+    }
+
+    const list = await Invoice.find(filters)
+      .sort({ issuedAt: -1, createdAt: -1 })
+      .populate("user", "firstName lastName email")
+      .populate({ path: "reservation", populate: { path: "car", select: "brand model licensePlate" } });
+
+    const normalizedQ = String(q || "").trim().toLowerCase();
+    const filtered = normalizedQ
+      ? list.filter((inv) => {
+          const user = inv.user || {};
+          const hay = `${inv.invoiceNumber} ${user.firstName || ""} ${user.lastName || ""} ${user.email || ""}`.toLowerCase();
+          return hay.includes(normalizedQ);
+        })
+      : list;
+
+    res.json({ data: filtered });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function createInvoiceForReservation(req, res, next) {
+  try {
+    const { reservationId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(reservationId)) {
+      const err = new Error("Invalid reservation ID");
+      err.status = 400;
+      throw err;
+    }
+
+    const reservation = await Reservation.findById(reservationId)
+      .populate("user", "firstName lastName email address")
+      .populate("car", "brand model licensePlate");
+
+    if (!reservation) {
+      const err = new Error("Reservation not found");
+      err.status = 404;
+      throw err;
+    }
+
+    const existing = await Invoice.findOne({ reservation: reservationId });
+    if (existing) {
+      res.json({ data: existing });
+      return;
+    }
+
+    const invoice = await Invoice.create({
+      invoiceNumber: nextInvoiceNumber(),
+      user: reservation.user?._id,
+      reservation: reservation._id,
+      issuedAt: new Date(),
+      amountTotal: reservation.totalPrice,
+      amountNet: reservation.totalPrice,
+      vatRate: 0,
+      amountVat: 0,
+      status: "ISSUED",
+    });
+
+    const { pdfUrl } = await writeInvoicePdf({
+      invoice,
+      reservation,
+      user: reservation.user,
+      car: reservation.car,
+    });
+
+    const updated = await Invoice.findByIdAndUpdate(invoice._id, { $set: { pdfUrl } }, { new: true });
+    res.status(201).json({ data: updated });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function downloadInvoicePdf(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      const err = new Error("Invalid invoice ID");
+      err.status = 400;
+      throw err;
+    }
+
+    const invoice = await Invoice.findById(id);
+    if (!invoice) {
+      const err = new Error("Invoice not found");
+      err.status = 404;
+      throw err;
+    }
+    if (!invoice.pdfUrl) {
+      const err = new Error("Invoice PDF not available");
+      err.status = 404;
+      throw err;
+    }
+
+    res.redirect(invoice.pdfUrl);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listCreditNotes(req, res, next) {
+  try {
+    const { q, status, from, to, userId } = req.query || {};
+    const filters = {};
+
+    if (status) filters.status = String(status).toUpperCase();
+    if (userId) {
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        const err = new Error("Invalid user ID");
+        err.status = 400;
+        throw err;
+      }
+      filters.user = userId;
+    }
+    if (from || to) {
+      const f = from ? new Date(from) : null;
+      const t = to ? new Date(to) : null;
+      filters.issuedAt = {};
+      if (f) filters.issuedAt.$gte = f;
+      if (t) {
+        t.setHours(23, 59, 59, 999);
+        filters.issuedAt.$lte = t;
+      }
+    }
+
+    const list = await CreditNote.find(filters)
+      .sort({ issuedAt: -1, createdAt: -1 })
+      .populate("user", "firstName lastName email")
+      .populate({ path: "reservation", populate: { path: "car", select: "brand model licensePlate" } })
+      .populate("invoice", "invoiceNumber");
+
+    const normalizedQ = String(q || "").trim().toLowerCase();
+    const filtered = normalizedQ
+      ? list.filter((cn) => {
+          const user = cn.user || {};
+          const hay = `${cn.creditNoteNumber} ${user.firstName || ""} ${user.lastName || ""} ${user.email || ""}`.toLowerCase();
+          return hay.includes(normalizedQ);
+        })
+      : list;
+
+    res.json({ data: filtered });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function createCreditNoteForReservation(req, res, next) {
+  try {
+    const { reservationId } = req.params;
+    const { amountTotal, reason } = req.body || {};
+    if (!mongoose.Types.ObjectId.isValid(reservationId)) {
+      const err = new Error("Invalid reservation ID");
+      err.status = 400;
+      throw err;
+    }
+
+    const reservation = await Reservation.findById(reservationId)
+      .populate("user", "firstName lastName email address")
+      .populate("car", "brand model licensePlate");
+
+    if (!reservation) {
+      const err = new Error("Reservation not found");
+      err.status = 404;
+      throw err;
+    }
+
+    const amount = Number(amountTotal);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      const err = new Error("Invalid amountTotal");
+      err.status = 400;
+      throw err;
+    }
+
+    const invoice = await Invoice.findOne({ reservation: reservation._id });
+
+    const creditNote = await CreditNote.create({
+      creditNoteNumber: nextCreditNoteNumber(),
+      user: reservation.user?._id,
+      reservation: reservation._id,
+      invoice: invoice?._id,
+      issuedAt: new Date(),
+      amountTotal: amount,
+      reason: String(reason || "").trim().slice(0, 500),
+      status: "ISSUED",
+    });
+
+    const { pdfUrl } = await writeCreditNotePdf({
+      creditNote,
+      reservation,
+      user: reservation.user,
+      car: reservation.car,
+      invoice,
+    });
+
+    const updated = await CreditNote.findByIdAndUpdate(creditNote._id, { $set: { pdfUrl } }, { new: true });
+    res.status(201).json({ data: updated });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function downloadCreditNotePdf(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      const err = new Error("Invalid credit note ID");
+      err.status = 400;
+      throw err;
+    }
+
+    const creditNote = await CreditNote.findById(id);
+    if (!creditNote) {
+      const err = new Error("Credit note not found");
+      err.status = 404;
+      throw err;
+    }
+    if (!creditNote.pdfUrl) {
+      const err = new Error("Credit note PDF not available");
+      err.status = 404;
+      throw err;
+    }
+
+    res.redirect(creditNote.pdfUrl);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function exportInvoicesZip(req, res, next) {
+  try {
+    const { from, to, userId, status } = req.query || {};
+    const filters = {};
+    if (status) filters.status = String(status).toUpperCase();
+    if (userId && mongoose.Types.ObjectId.isValid(userId)) filters.user = userId;
+    if (from || to) {
+      const f = from ? new Date(from) : null;
+      const t = to ? new Date(to) : null;
+      filters.issuedAt = {};
+      if (f) filters.issuedAt.$gte = f;
+      if (t) {
+        t.setHours(23, 59, 59, 999);
+        filters.issuedAt.$lte = t;
+      }
+    }
+
+    const invoices = await Invoice.find(filters).sort({ issuedAt: -1 });
+    const withPdf = invoices.filter((inv) => inv.pdfUrl);
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename=\"invoices.zip\"`);
+
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    archive.on("error", (err) => next(err));
+    archive.pipe(res);
+
+    for (const inv of withPdf) {
+      const fileName = (inv.pdfUrl || "").split("/").pop();
+      const abs = path.resolve(process.cwd(), "uploads", "invoices", fileName);
+      if (fileName && fsSync.existsSync(abs)) {
+        archive.file(abs, { name: fileName });
+      }
+    }
+
+    await archive.finalize();
   } catch (error) {
     next(error);
   }

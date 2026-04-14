@@ -217,6 +217,20 @@ export function getFinanceSummary(token, filters = {}) {
   });
 }
 
+export function getFinanceRevenueTimeseries(token, filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, value);
+    }
+  });
+  return apiFetch(`/api/admin/finance/revenue-timeseries?${params.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 export function getFinanceCharges(token, filters = {}) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
@@ -229,6 +243,43 @@ export function getFinanceCharges(token, filters = {}) {
     headers: {
       Authorization: `Bearer ${token}`,
     },
+  });
+}
+
+export function listInvoices(token, filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") params.set(key, value);
+  });
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiFetch(`/api/admin/invoices${suffix}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function createInvoiceForReservation(token, reservationId) {
+  return apiFetch(`/api/admin/reservations/${reservationId}/invoice`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function listCreditNotes(token, filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") params.set(key, value);
+  });
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiFetch(`/api/admin/credit-notes${suffix}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function createCreditNoteForReservation(token, reservationId, payload) {
+  return apiFetch(`/api/admin/reservations/${reservationId}/credit-note`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+    headers: { Authorization: `Bearer ${token}` },
   });
 }
 

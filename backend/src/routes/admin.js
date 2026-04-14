@@ -19,12 +19,21 @@ import {
   getFinanceProfitability,
   getFinanceSummary,
   getFinanceCharges,
+  getFinanceRevenueTimeseries,
+  exportFinanceRevenueCsv,
   createFinanceCharge,
   deleteFinanceCharge,
   updateCarInvestment,
   uploadCarImages,
   reviewUserDocument,
   reviewUserProfile,
+  listInvoices,
+  createInvoiceForReservation,
+  downloadInvoicePdf,
+  exportInvoicesZip,
+  listCreditNotes,
+  createCreditNoteForReservation,
+  downloadCreditNotePdf,
 } from "../controllers/adminController.js";
 
 const router = express.Router();
@@ -66,8 +75,20 @@ router.delete("/blocks/:id", deleteBlockedPeriod);
 router.get("/finance/profitability", getFinanceProfitability);
 router.get("/finance/summary", getFinanceSummary);
 router.get("/finance/charges", getFinanceCharges);
+router.get("/finance/revenue-timeseries", getFinanceRevenueTimeseries);
+router.get("/finance/revenue-timeseries.csv", exportFinanceRevenueCsv);
 router.post("/finance/charges", createFinanceCharge);
 router.delete("/finance/charges/:id", deleteFinanceCharge);
 router.patch("/finance/cars/:carId/investment", updateCarInvestment);
+
+// Factures / avoirs
+router.get("/invoices", listInvoices);
+router.post("/reservations/:reservationId/invoice", createInvoiceForReservation);
+router.get("/invoices/:id/pdf", downloadInvoicePdf);
+router.get("/invoices.zip", exportInvoicesZip);
+
+router.get("/credit-notes", listCreditNotes);
+router.post("/reservations/:reservationId/credit-note", createCreditNoteForReservation);
+router.get("/credit-notes/:id/pdf", downloadCreditNotePdf);
 
 export default router;

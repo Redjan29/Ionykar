@@ -2569,3 +2569,31 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Finance chart (5.3) */
+.finance-chart {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  padding: 12px;
+  margin-top: 10px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.finance-bar {
+  width: 14px;
+  flex: 0 0 14px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.finance-bar-inner {
+  width: 100%;
+  background: linear-gradient(180deg, #facc15, #f59e0b);
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}

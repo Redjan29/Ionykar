@@ -5,3 +5,5 @@ export { Contract } from "./Contract.js";
 export { BlockedPeriod } from "./BlockedPeriod.js";
 export { MaintenanceRecord } from "./MaintenanceRecord.js";
 export { FinanceCharge } from "./FinanceCharge.js";
+export { Invoice } from "./Invoice.js";
+export { CreditNote } from "./CreditNote.js";

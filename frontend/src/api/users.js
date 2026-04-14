@@ -42,3 +42,15 @@ export async function uploadMyDocument(docType, file) {
   }
   return json?.data || json;
 }
+
+export function listMyInvoices() {
+  return apiFetch("/api/users/invoices", {
+    headers: getAuthHeaders(),
+  });
+}
+
+export function listMyCreditNotes() {
+  return apiFetch("/api/users/credit-notes", {
+    headers: getAuthHeaders(),
+  });
+}

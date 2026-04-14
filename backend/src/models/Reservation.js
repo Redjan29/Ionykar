@@ -55,6 +55,23 @@ const reservationSchema = new mongoose.Schema(
       default: "PENDING",
       index: true,
     },
+    paymentStatus: {
+      type: String,
+      enum: ["UNPAID", "PAID", "REFUNDED"],
+      default: "UNPAID",
+      index: true,
+    },
+    depositStatus: {
+      type: String,
+      enum: ["NOT_REQUIRED", "PENDING", "HELD", "RELEASED"],
+      default: "PENDING",
+      index: true,
+    },
+    depositAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     notes: {
       type: String,
       maxlength: 1000,

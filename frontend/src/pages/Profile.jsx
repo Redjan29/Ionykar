@@ -1,6 +1,12 @@
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getProfile, updateProfile, uploadMyDocument } from "../api/users";
+import {
+  getProfile,
+  updateProfile,
+  uploadMyDocument,
+  listMyInvoices,
+  listMyCreditNotes,
+} from "../api/users";
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer.jsx";
@@ -16,6 +22,8 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [kyc, setKyc] = useState({});
+  const [invoices, setInvoices] = useState([]);
+  const [creditNotes, setCreditNotes] = useState([]);
   const [formData, setFormData] = useState({
     phone: "",
     street: "",
@@ -94,6 +102,13 @@ export default function Profile() {
         selfieWithLicense: (profile.kyc?.selfieWithLicense?.url || profile.selfieWithLicense) ? "Fichier déjà enregistré" : "",
         proofOfResidence: (profile.kyc?.proofOfResidence?.url || profile.proofOfResidence) ? "Fichier déjà enregistré" : "",
       });
+
+      const [invRes, cnRes] = await Promise.all([
+        listMyInvoices().catch(() => []),
+        listMyCreditNotes().catch(() => []),
+      ]);
+      setInvoices(Array.isArray(invRes) ? invRes : invRes?.data || []);
+      setCreditNotes(Array.isArray(cnRes) ? cnRes : cnRes?.data || []);
     } catch (err) {
       error("Erreur lors du chargement du profil");
     } finally {
@@ -588,6 +603,90 @@ export default function Profile() {
                 manuellement par un administrateur (statut “Validé”).
               </p>
             </div>
+
+            <section className="profile-section" style={{ marginTop: 18 }}>
+              <h2>Factures & avoirs</h2>
+
+              <div style={{ display: "grid", gap: 12 }}>
+                <div className="profile-note" style={{ margin: 0 }}>
+                  <p style={{ margin: 0 }}>
+                    Les factures et avoirs deviennent disponibles dès qu’ils sont générés par l’administrateur.
+                  </p>
+                </div>
+
+                <div style={{ display: "grid", gap: 10 }}>
+                  <strong>Factures</strong>
+                  {invoices.length === 0 ? (
+                    <div style={{ color: "#6b7280", fontWeight: 700 }}>Aucune facture.</div>
+                  ) : (
+                    <div style={{ display: "grid", gap: 8 }}>
+                      {invoices.slice(0, 10).map((inv) => {
+                        const url = inv?.pdfUrl ? getFileUrl(inv.pdfUrl) : "";
+                        return (
+                          <div
+                            key={inv._id}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              gap: 12,
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <div style={{ fontWeight: 800 }}>
+                              {inv.invoiceNumber} — {new Date(inv.issuedAt).toLocaleDateString("fr-FR")} —{" "}
+                              {typeof inv.amountTotal === "number" ? `${inv.amountTotal}€` : "—"}
+                            </div>
+                            {url ? (
+                              <a className="profile-doc-link" href={url} target="_blank" rel="noreferrer">
+                                Télécharger
+                              </a>
+                            ) : (
+                              <span style={{ color: "#6b7280", fontWeight: 700 }}>PDF indisponible</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: "grid", gap: 10 }}>
+                  <strong>Avoirs</strong>
+                  {creditNotes.length === 0 ? (
+                    <div style={{ color: "#6b7280", fontWeight: 700 }}>Aucun avoir.</div>
+                  ) : (
+                    <div style={{ display: "grid", gap: 8 }}>
+                      {creditNotes.slice(0, 10).map((cn) => {
+                        const url = cn?.pdfUrl ? getFileUrl(cn.pdfUrl) : "";
+                        return (
+                          <div
+                            key={cn._id}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              gap: 12,
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <div style={{ fontWeight: 800 }}>
+                              {cn.creditNoteNumber} — {new Date(cn.issuedAt).toLocaleDateString("fr-FR")} —{" "}
+                              {typeof cn.amountTotal === "number" ? `${cn.amountTotal}€` : "—"}
+                            </div>
+                            {url ? (
+                              <a className="profile-doc-link" href={url} target="_blank" rel="noreferrer">
+                                Télécharger
+                              </a>
+                            ) : (
+                              <span style={{ color: "#6b7280", fontWeight: 700 }}>PDF indisponible</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
           </form>
         </div>
       </div>

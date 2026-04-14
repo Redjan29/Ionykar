@@ -1,4 +1,4 @@
-import { User } from "../models/index.js";
+import { User, Invoice, CreditNote } from "../models/index.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
@@ -188,4 +188,71 @@ export function uploadMyDocument(req, res, next) {
       next(err);
     }
   });
+}
+
+export async function listMyInvoices(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const invoices = await Invoice.find({ user: userId })
+      .sort({ issuedAt: -1, createdAt: -1 })
+      .populate({ path: "reservation", populate: { path: "car", select: "brand model licensePlate" } });
+    res.json({ data: invoices });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function downloadMyInvoicePdf(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+    const invoice = await Invoice.findOne({ _id: id, user: userId });
+    if (!invoice) {
+      const err = new Error("Invoice not found");
+      err.status = 404;
+      throw err;
+    }
+    if (!invoice.pdfUrl) {
+      const err = new Error("Invoice PDF not available");
+      err.status = 404;
+      throw err;
+    }
+    res.redirect(invoice.pdfUrl);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listMyCreditNotes(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const creditNotes = await CreditNote.find({ user: userId })
+      .sort({ issuedAt: -1, createdAt: -1 })
+      .populate("invoice", "invoiceNumber")
+      .populate({ path: "reservation", populate: { path: "car", select: "brand model licensePlate" } });
+    res.json({ data: creditNotes });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function downloadMyCreditNotePdf(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+    const creditNote = await CreditNote.findOne({ _id: id, user: userId });
+    if (!creditNote) {
+      const err = new Error("Credit note not found");
+      err.status = 404;
+      throw err;
+    }
+    if (!creditNote.pdfUrl) {
+      const err = new Error("Credit note PDF not available");
+      err.status = 404;
+      throw err;
+    }
+    res.redirect(creditNote.pdfUrl);
+  } catch (error) {
+    next(error);
+  }
 }

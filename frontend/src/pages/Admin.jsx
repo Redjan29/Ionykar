@@ -21,6 +21,7 @@ import {
   deleteBlockedPeriod,
   getFinanceProfitability,
   getFinanceSummary,
+  getFinanceRevenueTimeseries,
   getFinanceCharges,
   createFinanceCharge,
   deleteFinanceCharge,
@@ -151,6 +152,8 @@ export default function Admin() {
   const [maintenanceData, setMaintenanceData] = useState({ records: [], summary: null });
   const [financeProfitability, setFinanceProfitability] = useState({ vehicles: [], totals: {} });
   const [financeSummary, setFinanceSummary] = useState(null);
+  const [financeRevenueSeries, setFinanceRevenueSeries] = useState(null);
+  const [financeRevenueSeriesPrev, setFinanceRevenueSeriesPrev] = useState(null);
   const [financeCharges, setFinanceCharges] = useState([]);
   const [financeFilters, setFinanceFilters] = useState(() => ({
     year: String(new Date().getFullYear()),
@@ -214,8 +217,22 @@ export default function Admin() {
         setCars(carsResponse);
         setFinanceCharges(chargesResponse);
       } else if (activeTab === "finance-summary") {
-        const response = await getFinanceSummary(token, financeFilters);
-        setFinanceSummary(response);
+        const yearNum = Number(financeFilters.year || new Date().getFullYear());
+        const monthNum = financeFilters.month ? Number(financeFilters.month) : "";
+        const granularity = monthNum ? "day" : "month";
+
+        const [summaryRes, seriesRes, seriesPrevRes] = await Promise.all([
+          getFinanceSummary(token, financeFilters),
+          getFinanceRevenueTimeseries(token, { ...financeFilters, granularity }),
+          getFinanceRevenueTimeseries(token, {
+            year: String(Number.isFinite(yearNum) ? yearNum - 1 : new Date().getFullYear() - 1),
+            month: financeFilters.month || "",
+            granularity,
+          }),
+        ]);
+        setFinanceSummary(summaryRes);
+        setFinanceRevenueSeries(seriesRes);
+        setFinanceRevenueSeriesPrev(seriesPrevRes);
       }
     } catch (err) {
       setError(err.message || "Erreur lors du chargement des données");
@@ -535,6 +552,8 @@ export default function Admin() {
               {activeTab === "finance-summary" && (
                 <FinanceSummaryView
                   summary={financeSummary}
+                  revenueSeries={financeRevenueSeries}
+                  revenueSeriesPrev={financeRevenueSeriesPrev}
                   financeFilters={financeFilters}
                   onChangeFinanceFilters={setFinanceFilters}
                 />
@@ -1553,7 +1572,7 @@ function FinanceChargesView({
   );
 }
 
-function FinanceSummaryView({ summary, financeFilters, onChangeFinanceFilters }) {
+function FinanceSummaryView({ summary, revenueSeries, revenueSeriesPrev, financeFilters, onChangeFinanceFilters }) {
   if (!summary) {
     return (
       <div className="empty-state">
@@ -1563,6 +1582,39 @@ function FinanceSummaryView({ summary, financeFilters, onChangeFinanceFilters })
   }
 
   const totals = summary.totals || {};
+  const points = Array.isArray(revenueSeries?.points) ? revenueSeries.points : [];
+  const prevPoints = Array.isArray(revenueSeriesPrev?.points) ? revenueSeriesPrev.points : [];
+  const maxRevenue = Math.max(1, ...points.map((p) => Number(p.revenue || 0)));
+  const currentPaidRevenue = points.reduce((acc, p) => acc + (Number(p.revenue || 0) || 0), 0);
+  const prevPaidRevenue = prevPoints.reduce((acc, p) => acc + (Number(p.revenue || 0) || 0), 0);
+  const deltaPct = prevPaidRevenue > 0 ? ((currentPaidRevenue - prevPaidRevenue) / prevPaidRevenue) * 100 : null;
+
+  function downloadCsv() {
+    const rows = [
+      ["date", "revenue", "reservationsCount"],
+      ...points.map((p) => [
+        p.date ? new Date(p.date).toISOString() : "",
+        Number(p.revenue || 0),
+        Number(p.count || 0),
+      ]),
+    ];
+    const escape = (v) => {
+      const s = v === null || v === undefined ? "" : String(v);
+      if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const csv = rows.map((r) => r.map(escape).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ionykar-ca.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   const distributionTotal = Math.max(1, totals.revenueTotal || 0);
   const distribution = [
     { label: "Investissement", value: totals.investmentTotal || 0, color: "#2563eb" },
@@ -1587,13 +1639,44 @@ function FinanceSummaryView({ summary, financeFilters, onChangeFinanceFilters })
           <p className="stat-number">{formatCurrency(totals.revenueTotal || 0)}</p>
         </div>
         <div className="stat-card">
-          <h3>Charges totales</h3>
-          <p className="stat-number">{formatCurrency(totals.chargesTotal || 0)}</p>
+          <h3>CA encaissé (période)</h3>
+          <p className="stat-number">{formatCurrency(currentPaidRevenue || 0)}</p>
         </div>
         <div className="stat-card">
-          <h3>Bénéfice global</h3>
-          <p className="stat-number">{formatCurrency(totals.netProfit || 0)}</p>
+          <h3>N-1 (comparaison)</h3>
+          <p className="stat-number">
+            {deltaPct === null ? "—" : `${deltaPct >= 0 ? "+" : ""}${deltaPct.toFixed(1)}%`}
+          </p>
         </div>
+      </div>
+
+      <div className="recent-reservations" style={{ marginTop: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <h2 style={{ margin: 0 }}>Évolution du CA (encaissé)</h2>
+          <button type="button" className="btn-approve" onClick={downloadCsv}>
+            Export CSV / Excel
+          </button>
+        </div>
+        {points.length === 0 ? (
+          <div className="empty-state">
+            <p>Aucune donnée de CA sur la période (uniquement les réservations payées).</p>
+          </div>
+        ) : (
+          <div className="finance-chart">
+            {points.map((p) => {
+              const revenue = Number(p.revenue || 0);
+              const h = Math.max(4, Math.round((revenue / maxRevenue) * 120));
+              const label = p.date
+                ? new Date(p.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })
+                : "";
+              return (
+                <div key={String(p.date)} className="finance-bar" title={`${label} — ${formatCurrency(revenue)}`}>
+                  <div className="finance-bar-inner" style={{ height: h }} />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="recent-reservations">
