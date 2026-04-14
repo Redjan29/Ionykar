@@ -37,7 +37,6 @@ export default function Checkout() {
     snowChains: false, // 15€/jour
     fullFuelPrepay: false, // 99€
     deliveryParis: false, // 50€
-    extraKm: 0, // km
   });
 
   useEffect(() => {
@@ -99,16 +98,13 @@ export default function Checkout() {
     const snowChainsPerDay = 15;
     const fullFuelFlat = 99;
     const deliveryFlat = 50;
-    const extraKmRate = 0.5;
 
     const unlimitedKm = options.unlimitedKm ? unlimitedKmPerDay * days : 0;
     const snowChains = options.snowChains ? snowChainsPerDay * days : 0;
     const fullFuel = options.fullFuelPrepay ? fullFuelFlat : 0;
     const delivery = options.deliveryParis ? deliveryFlat : 0;
-    const extraKm = Math.max(0, Number(options.extraKm || 0));
-    const extraKmCost = extraKm ? extraKm * extraKmRate : 0;
 
-    const optionsTotal = unlimitedKm + snowChains + fullFuel + delivery + extraKmCost;
+    const optionsTotal = unlimitedKm + snowChains + fullFuel + delivery;
     const total = base + optionsTotal;
 
     return {
@@ -116,17 +112,11 @@ export default function Checkout() {
       base,
       optionsTotal,
       total,
-      extraKmRate,
     };
   }, [options, periodPricing?.days, periodPricing?.total]);
 
   const handleToggle = (key) => {
     setOptions((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const handleExtraKmChange = (value) => {
-    const next = Math.max(0, Math.min(9999, Number(value || 0)));
-    setOptions((prev) => ({ ...prev, extraKm: Number.isFinite(next) ? next : 0 }));
   };
 
   const buildNotes = () => {
@@ -138,13 +128,12 @@ export default function Checkout() {
     if (options.snowChains) lines.push("Option: Chaînes neige (15€/jour)");
     if (options.fullFuelPrepay) lines.push("Option: Pré-paiement plein carburant (99€)");
     if (options.deliveryParis) lines.push("Option: Livraison à Paris (50€)");
-    if (options.extraKm) lines.push(`Option: Kilomètres supplémentaires: ${options.extraKm} km (0,50€/km)`);
     return lines.join(" | ") || undefined;
   };
 
   const handleContinue = async () => {
     if (!isAuthenticated) {
-      navigate(`/login?next=${encodeURIComponent(`/checkout?${searchParams.toString()}`)}`);
+      navigate(`/checkout/account?${searchParams.toString()}`);
       return;
     }
     if (!car || !periodPricing) return;
@@ -185,7 +174,7 @@ export default function Checkout() {
 
   return (
     <>
-      <Navbar />
+      <Navbar authDisabled={!isAuthenticated} />
       <div className="checkout-page">
         <div className="checkout-top">
           <Link className="checkout-back" to={`/cars?${searchParams.toString()}`}>
@@ -295,28 +284,7 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                <div className="checkout-option-card">
-                  <div className="checkout-option-main">
-                    <div className="checkout-option-title">Kilométrage supplémentaire</div>
-                    <div className="checkout-option-sub">
-                      {includedKmForPeriod
-                        ? `${includedKmForPeriod.toLocaleString("fr-FR")} km sont inclus, chaque kilomètre supplémentaire coûte 0,50 €`
-                        : "Chaque kilomètre supplémentaire coûte 0,50 €"}
-                    </div>
-                  </div>
-                  <div className="checkout-option-actions">
-                    <div className="checkout-extra-km">
-                      <input
-                        type="number"
-                        min={0}
-                        max={9999}
-                        value={options.extraKm}
-                        onChange={(e) => handleExtraKmChange(e.target.value)}
-                      />
-                      <span>km</span>
-                    </div>
-                  </div>
-                </div>
+                {/* Removed: Extra km option (users can't predict extra mileage) */}
               </div>
             )}
           </div>
@@ -335,8 +303,6 @@ export default function Checkout() {
                   {includedKmForPeriod
                     ? `${includedKmForPeriod.toLocaleString("fr-FR")} km sont inclus`
                     : "Kilométrage inclus"}{" "}
-                  , chaque kilomètre supplémentaire coûte{" "}
-                  <strong>0,50 €</strong>
                 </div>
                 <div className="checkout-preview-item">
                   ✓ Option de paiement : <strong>Restez flexible</strong> — Annulation et modification gratuites

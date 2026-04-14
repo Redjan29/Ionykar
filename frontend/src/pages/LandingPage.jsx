@@ -556,7 +556,8 @@ export default function LandingPage() {
               <div className="contact-info-card">
                 <div className="contact-icon">📞</div>
                 <h3>Téléphone</h3>
-                <p>0612193050</p>
+                <p>+33 6 13 65 76 87</p>
+                <p>+33 6 12 19 30 50</p>
                 <p className="contact-hours">Du lundi au dimanche, 8h - 22h</p>
               </div>
 

@@ -39,7 +39,6 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
     snowChains: false,
     fullFuelOption: false,
     delivery: false,
-    extraKm: 0,
   });
 
   const computeIncludedKm = (days) => {
@@ -63,10 +62,6 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
     const { name, type, checked, value } = e.target;
     setExtras((prev) => {
       if (type === "checkbox") return { ...prev, [name]: checked };
-      if (name === "extraKm") {
-        const nextVal = Math.max(0, Math.min(9999, Number(value || 0)));
-        return { ...prev, extraKm: Number.isFinite(nextVal) ? nextVal : 0 };
-      }
       return { ...prev, [name]: value };
     });
   };
@@ -120,16 +115,13 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
     const snowChainsPerDay = 15; // €/jour
     const fullFuelFlat = 99; // €
     const deliveryFlat = 50; // €
-    const extraKmRate = 0.5; // €/km
 
     const unlimitedKm = extras.unlimitedKm ? unlimitedKmPerDay * numberOfDays : 0;
     const snowChains = extras.snowChains ? snowChainsPerDay * numberOfDays : 0;
     const fullFuel = extras.fullFuelOption ? fullFuelFlat : 0;
     const delivery = extras.delivery ? deliveryFlat : 0;
-    const extraKm = Math.max(0, Number(extras.extraKm || 0));
-    const extraKmCost = extraKm ? extraKm * extraKmRate : 0;
 
-    const extrasTotal = unlimitedKm + snowChains + fullFuel + delivery + extraKmCost;
+    const extrasTotal = unlimitedKm + snowChains + fullFuel + delivery;
     const total = base + extrasTotal;
 
     return {
@@ -141,9 +133,6 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
         snowChains,
         fullFuel,
         delivery,
-        extraKm,
-        extraKmRate,
-        extraKmCost,
       },
     };
   }, [basePrice, days, extras]);
@@ -164,7 +153,6 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
     if (extras.snowChains) lines.push("Option: Chaînes neige");
     if (extras.fullFuelOption) lines.push("Option: Plein carburant (pré-paiement)");
     if (extras.delivery) lines.push("Option: Livraison à Paris (préavis 24h)");
-    if (extras.extraKm) lines.push(`Option: Kilomètres supplémentaires: ${extras.extraKm} km`);
     return lines.join(" | ");
   };
 
@@ -510,23 +498,6 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
                   <span>Livraison à Paris (préavis 24h)</span>
                   <span className="booking-extra-price">+50€</span>
                 </label>
-
-                <div className="booking-extra booking-extra-km">
-                  <div className="booking-extra-km-left">
-                    <div className="booking-extra-km-label">Kilomètres supplémentaires</div>
-                    <div className="booking-extra-km-hint">0,50€ / km au-delà du forfait inclus</div>
-                  </div>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={9999}
-                    name="extraKm"
-                    value={extras.extraKm}
-                    onChange={handleExtrasChange}
-                    className="booking-extra-km-input"
-                  />
-                </div>
               </div>
             </div>
 

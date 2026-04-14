@@ -23,12 +23,31 @@ function CarCard({
   nextAvailableDate,
   searchParams,
   hasSelectedDates = false,
+  imagePriority = false,
   onChooseDates,
   onBook,
 }) {
   const { formatPrice, language } = useAppContext();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  const normalizeCarsFilename = (rawUrl) => {
+    try {
+      const input = String(rawUrl || "");
+      if (!input.startsWith("/cars/")) return "";
+      const name = input.slice("/cars/".length);
+      if (!name) return "";
+      const normalized = name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // remove accents
+        .replace(/\s+/g, "_");
+      if (normalized === name) return "";
+      return `/cars/${normalized}`;
+    } catch {
+      return "";
+    }
+  };
 
   const computeIncludedKm = (days) => {
     const d = Math.max(0, Number(days || 0));
@@ -95,7 +114,12 @@ function CarCard({
 
   useEffect(() => {
     setActiveImageIndex(0);
+    setImageLoaded(false);
   }, [carId, galleryImages.length]);
+
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [activeImageIndex]);
 
   useEffect(() => {
     if (!hovered || galleryImages.length <= 1) {
@@ -121,12 +145,31 @@ function CarCard({
         }}
       >
         <img
-          className="car-card-image"
+          key={`${carId}-${activeImageIndex}`}
+          className={`car-card-image ${imageLoaded ? "is-loaded" : ""}`}
           src={resolveImageUrl(galleryImages[activeImageIndex])}
           alt={`${brand} ${model}`}
+          loading={imagePriority ? "eager" : "lazy"}
+          decoding="async"
+          fetchPriority={imagePriority ? "high" : "auto"}
           onError={(event) => {
-            event.currentTarget.src = FALLBACK_CAR_IMAGE;
+            const img = event.currentTarget;
+            const current = img.getAttribute("src") || "";
+            if (!img.dataset.altTried) {
+              const raw = galleryImages[activeImageIndex];
+              const alt = normalizeCarsFilename(raw);
+              if (alt) {
+                img.dataset.altTried = "1";
+                img.src = resolveImageUrl(alt);
+                return;
+              }
+            }
+            if (current !== FALLBACK_CAR_IMAGE) {
+              img.src = FALLBACK_CAR_IMAGE;
+            }
+            setImageLoaded(true);
           }}
+          onLoad={() => setImageLoaded(true)}
         />
         {galleryImages.length > 1 && (
           <span className="car-card-image-counter">

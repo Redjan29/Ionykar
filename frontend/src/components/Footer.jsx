@@ -41,6 +41,9 @@ export default function Footer() {
             <a className="ik-footer-link" href="mailto:contact@ionykar.fr">
               contact@ionykar.fr
             </a>
+            <a className="ik-footer-link" href="tel:+33613657687">
+              +33 6 13 65 76 87
+            </a>
             <a className="ik-footer-link" href="tel:+33612193050">
               +33 6 12 19 30 50
             </a>

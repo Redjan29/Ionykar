@@ -263,6 +263,20 @@
   text-decoration: underline;
 }
 
+.navbar-link-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+  text-decoration: none;
+}
+
+.navbar-button-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(0.2);
+}
+
 .navbar-admin-link {
   font-size: 14px;
   text-decoration: none;

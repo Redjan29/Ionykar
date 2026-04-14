@@ -142,6 +142,29 @@
   align-items: start;
 }
 
+.cars-skeleton-card {
+  height: 322px;
+  border-radius: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.09) 45%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 260% 100%;
+  animation: carsSkeleton 1200ms ease-in-out infinite;
+}
+
+@keyframes carsSkeleton {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 0%;
+  }
+}
+
 .cars-page-state {
   max-width: 1080px;
   margin: 0 auto;

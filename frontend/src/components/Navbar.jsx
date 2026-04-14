@@ -5,7 +5,7 @@ import "./Navbar.css";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
-export default function Navbar() {
+export default function Navbar({ authDisabled = false }) {
   const { currency, setCurrency, language, setLanguage } = useAppContext();
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
@@ -161,12 +161,25 @@ export default function Navbar() {
           </>
         ) : (
           <>
-            <Link to="/login" className="navbar-link">
-              {language === "fr" ? "Connexion" : "Log in"}
-            </Link>
-            <Link to="/signup" className="navbar-button">
-              {language === "fr" ? "Inscription" : "Sign up"}
-            </Link>
+            {authDisabled ? (
+              <>
+                <span className="navbar-link navbar-link-disabled" aria-disabled="true">
+                  {language === "fr" ? "Connexion" : "Log in"}
+                </span>
+                <span className="navbar-button navbar-button-disabled" aria-disabled="true">
+                  {language === "fr" ? "Inscription" : "Sign up"}
+                </span>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="navbar-link">
+                  {language === "fr" ? "Connexion" : "Log in"}
+                </Link>
+                <Link to="/signup" className="navbar-button">
+                  {language === "fr" ? "Inscription" : "Sign up"}
+                </Link>
+              </>
+            )}
           </>
         )}
       </div>

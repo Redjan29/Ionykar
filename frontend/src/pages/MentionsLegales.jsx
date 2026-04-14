@@ -26,7 +26,8 @@ export default function MentionsLegales() {
             <li>Raison sociale: IonyKar SAS</li>
             <li>Siège: Paris 12e — Bastille</li>
             <li>Email: contact@ionykar.fr</li>
-            <li>Téléphone: +33 6 12 19 30 50</li>
+            <li>Téléphone: +33 6 13 65 76 87</li>
+            <li>Téléphone (secondaire): +33 6 12 19 30 50</li>
             <li>Hébergeur: à renseigner</li>
           </ul>
         </div>

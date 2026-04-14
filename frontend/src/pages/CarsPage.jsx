@@ -350,19 +350,26 @@ function CarsPage() {
           </div>
         </section>
 
-        {loading && <div className="cars-page-state">Chargement...</div>}
+        {loading && (
+          <div className="cars-page-grid" aria-label="Chargement des véhicules">
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <div key={idx} className="cars-skeleton-card" />
+            ))}
+          </div>
+        )}
         {error && <div className="cars-page-state" style={{ color: "#ffb4b4" }}>{error}</div>}
         {!loading && !error && visibleCars.length === 0 && (
           <div className="cars-page-state">Aucune voiture disponible.</div>
         )}
         {!loading && !error && visibleCars.length > 0 && (
           <div className="cars-page-grid">
-            {visibleCars.map((car) => (
+            {visibleCars.map((car, idx) => (
               <CarCard
                 key={car._id || car.slug || car.id}
                 {...car}
                 searchParams={datesFromUrl.startDate ? datesFromUrl : null}
                 hasSelectedDates={hasSelectedDates}
+                imagePriority={idx < 2}
                 onChooseDates={() => {
                   setEditOpen(true);
                   window.scrollTo({ top: 0, behavior: "smooth" });
