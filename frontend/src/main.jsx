@@ -15,6 +15,7 @@ import CGL from "./pages/CGL.jsx";
 import MentionsLegales from "./pages/MentionsLegales.jsx";
 import PolitiqueConfidentialite from "./pages/PolitiqueConfidentialite.jsx";
 import Stations from "./pages/Stations.jsx";
+import ReservationConfirmation from "./pages/ReservationConfirmation.jsx";
 import { AppProvider } from "./context/AppContext.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import "./global.css";
@@ -34,6 +35,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <Route path="/signup" element={<Signup />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/my-reservations" element={<MyReservations />} />
+            <Route path="/reservation-confirmation" element={<ReservationConfirmation />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/cgl" element={<CGL />} />
             <Route path="/mentions-legales" element={<MentionsLegales />} />

@@ -139,7 +139,7 @@ export default function Checkout() {
     if (!car || !periodPricing) return;
     setSubmitting(true);
     try {
-      await createReservation({
+      const created = await createReservation({
         carId: car._id || car.id,
         startDate: initialDates.startDate,
         endDate: initialDates.endDate,
@@ -155,7 +155,7 @@ export default function Checkout() {
         },
         notes: buildNotes(),
       });
-      navigate("/my-reservations");
+      navigate(`/reservation-confirmation?id=${encodeURIComponent(String(created?._id || ""))}`);
     } catch (err) {
       setError(err?.message || "Erreur lors de l'envoi de la demande.");
     } finally {

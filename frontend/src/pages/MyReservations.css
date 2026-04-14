@@ -1,89 +1,267 @@
 .my-reservations-page {
-  min-height: calc(100vh - 64px);
-  padding: 32px;
-  background: #f9fafb;
+  min-height: 100vh;
+  padding: 44px 20px 50px;
 }
 
-.my-reservations-page h1 {
-  margin: 0 0 20px 0;
+.my-reservations-header {
+  max-width: 1080px;
+  margin: 0 auto 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.my-reservations-header h1 {
+  margin: 0;
+  font-family: var(--ik-font-title);
   font-size: 28px;
+  letter-spacing: 0.2px;
+}
+
+.my-reservations-subtitle {
+  margin-top: 10px;
+  color: var(--ik-muted);
+  font-weight: 700;
+  max-width: 60ch;
+}
+
+.my-reservations-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--ik-yellow);
+  color: var(--ik-black);
+  text-decoration: none;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.my-reservations-state {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 700;
 }
 
 .my-reservations-error {
-  color: #b91c1c;
-  background: #fee2e2;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 16px;
+  max-width: 1080px;
+  margin: 0 auto;
+  color: #ffb4b4;
+  background: rgba(255, 90, 31, 0.12);
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 180, 180, 0.35);
+  font-weight: 800;
 }
 
 .my-reservations-empty {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 24px;
-  color: #4b5563;
+  max-width: 1080px;
+  margin: 0 auto;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 18px;
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 700;
 }
 
-.my-reservations-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #ffffff;
-  border-radius: 12px;
-  overflow: hidden;
+.my-reservations-grid {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
 }
 
-.my-reservations-table th,
-.my-reservations-table td {
-  text-align: left;
-  padding: 12px 14px;
-  border-bottom: 1px solid #f3f4f6;
+.my-res-card {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 14px;
 }
 
-.my-reservations-table th {
-  background: #f3f4f6;
-  font-size: 13px;
-  color: #374151;
+.my-res-card-top {
+  display: grid;
+  grid-template-columns: 110px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.reservation-status {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 999px;
+.my-res-image {
+  width: 110px;
+  height: 78px;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.my-res-title {
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 16px;
+}
+
+.my-res-sub {
+  margin-top: 6px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 12px;
-  font-weight: 600;
 }
 
-.reservation-status.pending {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.reservation-status.confirmed,
-.reservation-status.active {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.reservation-status.completed {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.reservation-status.cancelled {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
-.cancel-btn {
-  border: none;
-  background: #ef4444;
-  color: white;
-  border-radius: 8px;
+.my-res-status {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
   padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 12px;
+  border: 1px solid transparent;
+}
+
+.my-res-status-pending {
+  background: rgba(252, 190, 12, 0.12);
+  border-color: rgba(252, 190, 12, 0.35);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.my-res-status-confirmed,
+.my-res-status-active {
+  background: rgba(59, 130, 246, 0.14);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.my-res-status-completed {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.my-res-status-cancelled {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.my-res-price {
+  text-align: right;
+}
+
+.my-res-price-label {
+  color: rgba(255, 255, 255, 0.62);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.my-res-price-value {
+  margin-top: 6px;
+  font-weight: 900;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.my-res-details {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.my-res-detail {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.my-res-detail-wide {
+  grid-column: 1 / -1;
+}
+
+.my-res-detail-label {
+  color: rgba(255, 255, 255, 0.62);
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.my-res-detail-value {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.my-res-muted {
+  color: rgba(255, 255, 255, 0.62);
+  font-weight: 800;
+  margin-left: 6px;
+}
+
+.my-res-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.my-res-view {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+  font-weight: 900;
+}
+
+.my-res-cancel {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 900;
   cursor: pointer;
 }
 
-.cancel-btn:hover {
-  background: #dc2626;
+.my-res-cancel:hover {
+  filter: brightness(1.05);
+}
+
+@media (max-width: 720px) {
+  .my-reservations-header {
+    flex-direction: column;
+  }
+
+  .my-res-card-top {
+    grid-template-columns: 92px 1fr;
+  }
+
+  .my-res-price {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+
+  .my-res-details {
+    grid-template-columns: 1fr;
+  }
 }

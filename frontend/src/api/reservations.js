@@ -15,6 +15,14 @@ export function getMyReservations(token) {
   });
 }
 
+export function getReservationById(token, reservationId) {
+  return apiFetch(`/api/reservations/${reservationId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 export function cancelMyReservation(token, reservationId) {
   return apiFetch(`/api/reservations/my/${reservationId}/cancel`, {
     method: "PATCH",
