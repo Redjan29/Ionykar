@@ -10,6 +10,7 @@ import {
   createCar,
   updateCar,
   getBlockedPeriods,
+  getAllBlockedPeriods,
   createBlockedPeriod,
   deleteBlockedPeriod,
   getMaintenanceRecords,
@@ -23,6 +24,7 @@ import {
   updateCarInvestment,
   uploadCarImages,
   reviewUserDocument,
+  reviewUserProfile,
 } from "../controllers/adminController.js";
 
 const router = express.Router();
@@ -41,6 +43,7 @@ router.patch("/reservations/:id/status", updateReservationStatus);
 router.get("/users", getAllUsers);
 router.patch("/users/:id", updateUser);
 router.patch("/users/:id/documents/:docType", reviewUserDocument);
+router.patch("/users/:id/profile-review", reviewUserProfile);
 
 // Gestion des voitures
 router.get("/cars", getAllCars);
@@ -54,6 +57,7 @@ router.post("/maintenance-records", createMaintenanceRecord);
 router.delete("/maintenance-records/:id", deleteMaintenanceRecord);
 
 // Gestion des périodes bloquées
+router.get("/blocks", getAllBlockedPeriods);
 router.get("/cars/:carId/blocks", getBlockedPeriods);
 router.post("/cars/:carId/blocks", createBlockedPeriod);
 router.delete("/blocks/:id", deleteBlockedPeriod);

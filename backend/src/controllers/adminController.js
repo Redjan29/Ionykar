@@ -15,6 +15,10 @@ const KYC_STATUSES = new Set(["MISSING", "PENDING", "APPROVED", "REJECTED"]);
 const USER_DOC_TYPES = new Set([
   "profilePhoto",
   "driverLicensePhoto",
+  "driverLicenseFront",
+  "driverLicenseBack",
+  "idCardFront",
+  "idCardBack",
   "selfieWithLicense",
   "proofOfResidence",
 ]);
@@ -808,7 +812,7 @@ export async function updateReservationStatus(req, res, next) {
 // Lister tous les utilisateurs
 export async function getAllUsers(req, res, next) {
   try {
-    const { hasPassword, isActive } = req.query;
+    const { hasPassword, isActive, q, createdFrom, createdTo, dossierStatus } = req.query;
     
     const filters = {};
     if (hasPassword !== undefined) {
@@ -817,6 +821,16 @@ export async function getAllUsers(req, res, next) {
     if (isActive !== undefined) {
       filters.isActive = isActive === "true";
     }
+    if (createdFrom || createdTo) {
+      filters.createdAt = {};
+      if (createdFrom) filters.createdAt.$gte = new Date(createdFrom);
+      if (createdTo) filters.createdAt.$lte = new Date(createdTo);
+    }
+    if (q) {
+      const escaped = String(q).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(escaped, "i");
+      filters.$or = [{ firstName: regex }, { lastName: regex }, { email: regex }];
+    }
 
     const users = await User.find(filters)
       .select("-password")
@@ -824,7 +838,13 @@ export async function getAllUsers(req, res, next) {
       .populate("reservations")
       .lean({ virtuals: true });
 
-    res.json({ data: users });
+    const normalizedDossier = String(dossierStatus || "").toUpperCase().trim();
+    const filtered =
+      normalizedDossier && ["PENDING", "APPROVED", "REJECTED"].includes(normalizedDossier)
+        ? users.filter((u) => String(u?.kycProfileStatus || "").toUpperCase() === normalizedDossier)
+        : users;
+
+    res.json({ data: filtered });
   } catch (error) {
     next(error);
   }
@@ -869,6 +889,61 @@ export async function reviewUserDocument(req, res, next) {
       setUpdates[`kyc.${docType}.rejectedReason`] = String(rejectedReason).trim().slice(0, 500);
     } else {
       unsetUpdates[`kyc.${docType}.rejectedReason`] = "";
+    }
+
+    const updated = await User.findByIdAndUpdate(
+      id,
+      { $set: setUpdates, ...(Object.keys(unsetUpdates).length ? { $unset: unsetUpdates } : {}) },
+      { new: true, runValidators: true }
+    )
+      .select("-password")
+      .lean({ virtuals: true });
+
+    if (!updated) {
+      const err = new Error("User not found");
+      err.status = 404;
+      throw err;
+    }
+
+    res.json({ data: updated });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function reviewUserProfile(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      const err = new Error("Invalid user id");
+      err.status = 400;
+      throw err;
+    }
+
+    const { status, rejectedReason } = req.body || {};
+    const normalizedStatus = String(status || "").toUpperCase();
+    if (!["APPROVED", "REJECTED"].includes(normalizedStatus)) {
+      const err = new Error("Invalid status");
+      err.status = 400;
+      throw err;
+    }
+
+    const now = new Date();
+    const setUpdates = {
+      "profileReview.status": normalizedStatus,
+      "profileReview.reviewedAt": now,
+    };
+    const unsetUpdates = {};
+
+    if (normalizedStatus === "REJECTED") {
+      if (!rejectedReason || String(rejectedReason).trim().length < 3) {
+        const err = new Error("rejectedReason is required when status is REJECTED");
+        err.status = 400;
+        throw err;
+      }
+      setUpdates["profileReview.rejectedReason"] = String(rejectedReason).trim().slice(0, 500);
+    } else {
+      unsetUpdates["profileReview.rejectedReason"] = "";
     }
 
     const updated = await User.findByIdAndUpdate(
@@ -1498,6 +1573,55 @@ export async function getBlockedPeriods(req, res, next) {
   }
 }
 
+// Récupérer toutes les périodes bloquées (optionnellement filtrées)
+export async function getAllBlockedPeriods(req, res, next) {
+  try {
+    const { carId, from, to } = req.query || {};
+
+    const filters = {};
+    if (carId) {
+      if (!mongoose.Types.ObjectId.isValid(carId)) {
+        const err = new Error("Invalid car ID");
+        err.status = 400;
+        throw err;
+      }
+      filters.car = carId;
+    }
+
+    // Filtre par chevauchement de période:
+    // on récupère les blocs dont [startDate,endDate] intersecte [from,to]
+    if (from || to) {
+      const fromDate = from ? new Date(from) : null;
+      const toDate = to ? new Date(to) : null;
+
+      if (fromDate && Number.isNaN(fromDate.getTime())) {
+        const err = new Error("Invalid from date");
+        err.status = 400;
+        throw err;
+      }
+      if (toDate && Number.isNaN(toDate.getTime())) {
+        const err = new Error("Invalid to date");
+        err.status = 400;
+        throw err;
+      }
+
+      if (fromDate && toDate) {
+        filters.startDate = { $lte: toDate };
+        filters.endDate = { $gte: fromDate };
+      } else if (fromDate) {
+        filters.endDate = { $gte: fromDate };
+      } else if (toDate) {
+        filters.startDate = { $lte: toDate };
+      }
+    }
+
+    const blockedPeriods = await BlockedPeriod.find(filters).sort({ startDate: 1 });
+    res.json({ data: blockedPeriods });
+  } catch (error) {
+    next(error);
+  }
+}
+
 // Créer une nouvelle période bloquée
 export async function createBlockedPeriod(req, res, next) {
   try {
@@ -1519,8 +1643,21 @@ export async function createBlockedPeriod(req, res, next) {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    if (start >= end) {
-      const err = new Error("endDate must be after startDate");
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      const err = new Error("Invalid startDate or endDate");
+      err.status = 400;
+      throw err;
+    }
+
+    // On accepte un blocage "jour unique" (startDate == endDate).
+    // Dans ce cas, on étend endDate à la fin de journée pour un comportement inclusif.
+    const sameDay = start.toDateString() === end.toDateString();
+    if (sameDay) {
+      end.setHours(23, 59, 59, 999);
+    }
+
+    if (start > end) {
+      const err = new Error("endDate must be on or after startDate");
       err.status = 400;
       throw err;
     }
@@ -1535,6 +1672,19 @@ export async function createBlockedPeriod(req, res, next) {
 
     if (conflictingReservation) {
       const err = new Error("Cannot block period: there is a confirmed reservation during this time");
+      err.status = 409;
+      throw err;
+    }
+
+    // Vérifier qu'il n'y a pas déjà un blocage sur cette période
+    const conflictingBlock = await BlockedPeriod.findOne({
+      car: carId,
+      startDate: { $lte: end },
+      endDate: { $gte: start },
+    });
+
+    if (conflictingBlock) {
+      const err = new Error("Cannot block period: there is already a blocked period during this time");
       err.status = 409;
       throw err;
     }

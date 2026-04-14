@@ -16,9 +16,25 @@ const kycDocumentSchema = new mongoose.Schema(
 const kycSchema = new mongoose.Schema(
   {
     profilePhoto: { type: kycDocumentSchema, default: () => ({}) },
+    // Legacy single photo field (kept for backward compatibility)
     driverLicensePhoto: { type: kycDocumentSchema, default: () => ({}) },
+    // New structured documents (CDC)
+    driverLicenseFront: { type: kycDocumentSchema, default: () => ({}) },
+    driverLicenseBack: { type: kycDocumentSchema, default: () => ({}) },
+    idCardFront: { type: kycDocumentSchema, default: () => ({}) },
+    idCardBack: { type: kycDocumentSchema, default: () => ({}) },
     selfieWithLicense: { type: kycDocumentSchema, default: () => ({}) },
     proofOfResidence: { type: kycDocumentSchema, default: () => ({}) },
+  },
+  { _id: false }
+);
+
+const PROFILE_REVIEW_STATUSES = ["PENDING", "APPROVED", "REJECTED"];
+const profileReviewSchema = new mongoose.Schema(
+  {
+    status: { type: String, enum: PROFILE_REVIEW_STATUSES, default: "PENDING", index: true },
+    rejectedReason: { type: String, maxlength: 500 },
+    reviewedAt: { type: Date },
   },
   { _id: false }
 );
@@ -92,6 +108,10 @@ const userSchema = new mongoose.Schema(
       type: kycSchema,
       default: () => ({}),
     },
+    profileReview: {
+      type: profileReviewSchema,
+      default: () => ({}),
+    },
     licenseObtainedDate: {
       type: Date,
     },
@@ -127,6 +147,28 @@ userSchema.virtual("kycApproved").get(function kycApproved() {
   const required = ["driverLicensePhoto", "proofOfResidence"];
   const kyc = this.kyc || {};
   return required.every((key) => kyc?.[key]?.status === "APPROVED");
+});
+
+userSchema.virtual("kycProfileStatus").get(function kycProfileStatus() {
+  const kyc = this.kyc || {};
+  const hasStructuredDocs =
+    Boolean(kyc?.driverLicenseFront?.url) ||
+    Boolean(kyc?.driverLicenseBack?.url) ||
+    Boolean(kyc?.idCardFront?.url) ||
+    Boolean(kyc?.idCardBack?.url);
+
+  // Backward-compatible behavior:
+  // - If the user hasn't started uploading structured docs yet, we consider the dossier
+  //   based on the legacy required docs already used in the app (permis + justificatif).
+  const requiredDocs = hasStructuredDocs
+    ? ["driverLicenseFront", "driverLicenseBack", "idCardFront", "idCardBack", "proofOfResidence"]
+    : ["driverLicensePhoto", "proofOfResidence"];
+
+  const statuses = requiredDocs.map((key) => String(kyc?.[key]?.status || (kyc?.[key]?.url ? "PENDING" : "MISSING")).toUpperCase());
+  if (statuses.some((s) => s === "REJECTED")) return "REJECTED";
+  if (statuses.every((s) => s === "APPROVED")) return "APPROVED";
+  if (statuses.some((s) => s === "PENDING")) return "PENDING";
+  return "PENDING";
 });
 
 export const User = mongoose.model("User", userSchema);

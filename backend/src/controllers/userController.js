@@ -14,6 +14,10 @@ const ALLOWED_UPLOAD_MIME_TYPES = new Set([
 const USER_DOC_TYPES = new Set([
   "profilePhoto",
   "driverLicensePhoto",
+  "driverLicenseFront",
+  "driverLicenseBack",
+  "idCardFront",
+  "idCardBack",
   "selfieWithLicense",
   "proofOfResidence",
 ]);

@@ -16,6 +16,7 @@ import {
   updateCar,
   updateUser,
   getBlockedPeriods,
+  getAllBlockedPeriods,
   createBlockedPeriod,
   deleteBlockedPeriod,
   getFinanceProfitability,
@@ -26,6 +27,7 @@ import {
   updateCarInvestment,
   uploadCarImages as uploadCarImagesApi,
   reviewUserDocument,
+  reviewUserProfile,
 } from "../api/admin";
 import "./Admin.css";
 
@@ -2376,11 +2378,268 @@ function ReservationsView({ reservations = [], onUpdateStatus }) {
   );
 }
 
+function computeDossierStatus(user) {
+  const kyc = user?.kyc || {};
+  const hasStructuredDocs =
+    Boolean(kyc?.driverLicenseFront?.url) ||
+    Boolean(kyc?.driverLicenseBack?.url) ||
+    Boolean(kyc?.idCardFront?.url) ||
+    Boolean(kyc?.idCardBack?.url);
+
+  const docTypes = hasStructuredDocs
+    ? ["driverLicenseFront", "driverLicenseBack", "idCardFront", "idCardBack", "proofOfResidence"]
+    : ["driverLicensePhoto", "proofOfResidence"];
+
+  const statuses = docTypes.map((t) =>
+    String(kyc?.[t]?.status || (kyc?.[t]?.url ? "PENDING" : "MISSING")).toUpperCase()
+  );
+  if (statuses.some((s) => s === "REJECTED")) return "REJECTED";
+  if (statuses.every((s) => s === "APPROVED")) return "APPROVED";
+  if (statuses.some((s) => s === "PENDING")) return "PENDING";
+  return "PENDING";
+}
+
+function DossierStatusPill({ status }) {
+  const normalized = String(status || "PENDING").toUpperCase();
+  const labelMap = { PENDING: "En attente", APPROVED: "Validé", REJECTED: "Refusé" };
+  const classMap = { PENDING: "kyc-pill-pending", APPROVED: "kyc-pill-approved", REJECTED: "kyc-pill-rejected" };
+  return <span className={`kyc-pill ${classMap[normalized] || "kyc-pill-pending"}`}>{labelMap[normalized] || normalized}</span>;
+}
+
+function ClientProfileModal({ open, user, token, onClose, onRefresh }) {
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setReason("");
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
+
+  if (!open || !user) return null;
+
+  const kyc = user.kyc || {};
+  // Must match the current "Documents" admin view
+  const docDefs = [
+    { key: "driverLicensePhoto", label: "Photo permis" },
+    { key: "selfieWithLicense", label: "Selfie + permis" },
+    { key: "proofOfResidence", label: "Justificatif domicile" },
+  ];
+
+  const docStatus = (key) => {
+    const doc = kyc?.[key] || {};
+    const url = doc?.url || user?.[key] || "";
+    return String(doc?.status || (url ? "PENDING" : "MISSING")).toUpperCase();
+  };
+  const docUrl = (key) => {
+    const doc = kyc?.[key] || {};
+    const url = doc?.url || user?.[key] || "";
+    return resolveMaybeUploadUrl(url);
+  };
+
+  const handleApprove = async () => {
+    if (!token) return;
+    setSaving(true);
+    try {
+      await reviewUserProfile(token, user._id, { status: "APPROVED" });
+      onRefresh?.();
+      onClose?.();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!token) return;
+    const trimmed = String(reason || "").trim();
+    if (trimmed.length < 3) {
+      alert("Merci de renseigner un motif (min. 3 caractères).");
+      return;
+    }
+    setSaving(true);
+    try {
+      await reviewUserProfile(token, user._id, { status: "REJECTED", rejectedReason: trimmed });
+      onRefresh?.();
+      onClose?.();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="admin-modal-backdrop" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>
+      <div className="admin-modal" role="dialog" aria-modal="true">
+        <div className="admin-modal-top">
+          <div className="admin-modal-title">
+            Fiche client — {`${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email}
+          </div>
+          <button type="button" className="admin-modal-close" onClick={onClose} aria-label="Fermer">
+            ×
+          </button>
+        </div>
+        <div className="admin-modal-body">
+          <div className="client-profile-grid">
+            <div className="client-profile-card">
+              <div className="client-profile-row"><strong>Email</strong><span>{user.email}</span></div>
+              <div className="client-profile-row"><strong>Téléphone</strong><span>{user.phone || "—"}</span></div>
+              <div className="client-profile-row"><strong>Adresse</strong><span>{user.address?.street || "—"} {user.address?.zipCode || ""} {user.address?.city || ""}</span></div>
+              <div className="client-profile-row"><strong>Inscription</strong><span>{user.createdAt ? new Date(user.createdAt).toLocaleDateString("fr-FR") : "—"}</span></div>
+              <div className="client-profile-row"><strong>Dossier</strong><span><DossierStatusPill status={user.kycProfileStatus || computeDossierStatus(user)} /></span></div>
+            </div>
+
+            <div className="client-profile-card">
+              <div className="client-profile-section-title">Documents</div>
+              <div className="client-docs-list">
+                {docDefs.map((d) => {
+                  const url = docUrl(d.key);
+                  return (
+                    <div key={d.key} className="client-doc-row">
+                      <div className="client-doc-left">
+                        <div className="client-doc-name">{d.label}</div>
+                        <div className="client-doc-meta">
+                          <KycStatusPill status={docStatus(d.key)} />
+                        </div>
+                      </div>
+                      <div className="client-doc-actions">
+                        {url ? (
+                          <>
+                            <button type="button" className="kyc-preview-link" onClick={() => window.open(url, "_blank", "noreferrer")}>
+                              Voir
+                            </button>
+                            <a className="kyc-preview-link" href={url} download>
+                              Télécharger
+                            </a>
+                          </>
+                        ) : (
+                          <span className="kyc-preview-missing">—</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="client-profile-card" style={{ marginTop: 14 }}>
+            <div className="client-profile-section-title">Historique des locations</div>
+            {Array.isArray(user.reservations) && user.reservations.length ? (
+              <div className="client-history">
+                {user.reservations.slice(0, 8).map((r) => (
+                  <div key={r._id} className="client-history-row">
+                    <div>
+                      <strong>{r.status}</strong>{" "}
+                      <span className="client-history-muted">
+                        {new Date(r.startDate).toLocaleDateString("fr-FR")} → {new Date(r.endDate).toLocaleDateString("fr-FR")}
+                      </span>
+                    </div>
+                    <div><strong>{r.totalPrice}€</strong></div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="client-history-empty">Aucune location.</div>
+            )}
+          </div>
+
+          <div className="client-profile-actions">
+            <button type="button" className="kyc-approve" disabled={saving} onClick={handleApprove}>
+              Valider le profil
+            </button>
+            <div className="client-profile-reject">
+              <input
+                className="kyc-reason-input"
+                placeholder="Motif de refus (envoyé par email plus tard)"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                disabled={saving}
+              />
+              <button type="button" className="kyc-reject" disabled={saving} onClick={handleReject}>
+                Refuser le profil
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Liste des utilisateurs
 function UsersView({ users = [], onToggleActive }) {
+  const { token } = useAuth();
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("PENDING");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const matches = (u) => {
+      if (!q) return true;
+      const name = `${u.firstName || ""} ${u.lastName || ""}`.trim().toLowerCase();
+      const email = String(u.email || "").toLowerCase();
+      return name.includes(q) || email.includes(q);
+    };
+    const statusOk = (u) => {
+      const st = String(u?.kycProfileStatus || computeDossierStatus(u)).toUpperCase();
+      const target = String(statusFilter || "ALL").toUpperCase();
+      if (target === "ALL") return true;
+      return st === target;
+    };
+    const dateOk = (u) => {
+      if (!from && !to) return true;
+      const created = u.createdAt ? new Date(u.createdAt) : null;
+      if (!created) return false;
+      if (from) {
+        const f = new Date(from);
+        if (created < f) return false;
+      }
+      if (to) {
+        const t = new Date(to);
+        t.setHours(23, 59, 59, 999);
+        if (created > t) return false;
+      }
+      return true;
+    };
+    return users.filter((u) => matches(u) && statusOk(u) && dateOk(u));
+  }, [from, query, statusFilter, to, users]);
+
   return (
     <div className="users-view">
-      {users.length === 0 ? (
+      <ClientProfileModal
+        open={Boolean(selectedUser)}
+        user={selectedUser}
+        token={token}
+        onClose={() => setSelectedUser(null)}
+        onRefresh={() => {}}
+      />
+
+      <div className="kyc-filterbar">
+        <div className="kyc-filter-controls">
+          <input className="kyc-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher (nom / email)…" />
+          <select className="kyc-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="ALL">Tous statuts</option>
+            <option value="PENDING">En attente</option>
+            <option value="APPROVED">Validé</option>
+            <option value="REJECTED">Refusé</option>
+          </select>
+          <input className="kyc-select" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <input className="kyc-select" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        </div>
+        <div className="kyc-filter-count">{filtered.length} client{filtered.length > 1 ? "s" : ""}</div>
+      </div>
+
+      {filtered.length === 0 ? (
         <div className="empty-state">
           <p>👥 Aucun utilisateur trouvé</p>
         </div>
@@ -2391,7 +2650,7 @@ function UsersView({ users = [], onToggleActive }) {
             <th>Nom</th>
             <th>Email</th>
             <th>Téléphone</th>
-            <th>Permis</th>
+            <th>Dossier</th>
             <th>Type compte</th>
             <th>Réservations</th>
             <th>Statut</th>
@@ -2399,19 +2658,15 @@ function UsersView({ users = [], onToggleActive }) {
           </tr>
         </thead>
         <tbody>
-          {users.map((u) => (
-            <tr key={u._id}>
+          {filtered.map((u) => (
+            <tr key={u._id} onDoubleClick={() => setSelectedUser(u)} style={{ cursor: "pointer" }}>
               <td>
                 {u.firstName} {u.lastName}
               </td>
               <td>{u.email}</td>
               <td>{u.phone}</td>
               <td>
-                {u.licenseNumber}
-                <br />
-                <small>
-                  Exp: {new Date(u.licenseExpiry).toLocaleDateString()}
-                </small>
+                <DossierStatusPill status={u.kycProfileStatus || computeDossierStatus(u)} />
               </td>
               <td>
                 {u.hasPassword ? (
@@ -2429,6 +2684,16 @@ function UsersView({ users = [], onToggleActive }) {
                 )}
               </td>
               <td>
+                <button
+                  className="btn-approve"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedUser(u);
+                  }}
+                >
+                  Fiche
+                </button>
                 <button
                   className={u.isActive ? "btn-deactivate" : "btn-activate"}
                   onClick={() => onToggleActive(u._id, u.isActive)}
@@ -3953,8 +4218,12 @@ function CalendarView({ token }) {
   const [reservations, setReservations] = useState([]);
   const [blockedPeriods, setBlockedPeriods] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [viewMode, setViewMode] = useState("week");
+  const [cursorDate, setCursorDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState("week"); // day | week | month
+  const [selectedCarId, setSelectedCarId] = useState("ALL");
+  const [cellModal, setCellModal] = useState(null); // { car, day, reservation, block }
+  const [blockDraft, setBlockDraft] = useState({ startDate: "", endDate: "", reason: "" });
+  const [savingBlock, setSavingBlock] = useState(false);
 
   useEffect(() => {
     loadCalendarData();
@@ -3971,12 +4240,9 @@ function CalendarView({ token }) {
       setCars(carsRes);
       setReservations(reservationsRes);
 
-      // Charger tous les blocages pour toutes les voitures
-      const blocksPromises = carsRes.map((car) =>
-        getBlockedPeriods(token, car._id).catch(() => [])
-      );
-      const allBlocks = await Promise.all(blocksPromises);
-      setBlockedPeriods(allBlocks.flat());
+      // Charger tous les blocages en une seule requête (plus rapide)
+      const blocksRes = await getAllBlockedPeriods(token).catch(() => []);
+      setBlockedPeriods(Array.isArray(blocksRes) ? blocksRes : []);
     } catch (err) {
       alert(err.message || "Erreur lors du chargement du calendrier");
     } finally {
@@ -4041,37 +4307,41 @@ function CalendarView({ token }) {
     );
   }
 
-  const days = viewMode === "week" ? getDaysInWeek(currentMonth) : getDaysInMonth(currentMonth);
+  const days =
+    viewMode === "day"
+      ? [new Date(cursorDate)]
+      : viewMode === "week"
+        ? getDaysInWeek(cursorDate)
+        : getDaysInMonth(cursorDate);
 
-  function goToPreviousMonth() {
-    if (viewMode === "week") {
-      const previous = new Date(currentMonth);
-      previous.setDate(previous.getDate() - 7);
-      setCurrentMonth(previous);
-      return;
-    }
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  function goToPrevious() {
+    const previous = new Date(cursorDate);
+    if (viewMode === "day") previous.setDate(previous.getDate() - 1);
+    else if (viewMode === "week") previous.setDate(previous.getDate() - 7);
+    else previous.setMonth(previous.getMonth() - 1);
+    setCursorDate(previous);
   }
 
-  function goToNextMonth() {
-    if (viewMode === "week") {
-      const next = new Date(currentMonth);
-      next.setDate(next.getDate() + 7);
-      setCurrentMonth(next);
-      return;
-    }
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  function goToNext() {
+    const next = new Date(cursorDate);
+    if (viewMode === "day") next.setDate(next.getDate() + 1);
+    else if (viewMode === "week") next.setDate(next.getDate() + 7);
+    else next.setMonth(next.getMonth() + 1);
+    setCursorDate(next);
   }
 
   function goToToday() {
-    setCurrentMonth(new Date());
+    setCursorDate(new Date());
   }
 
   if (loading) {
     return <p>Chargement du calendrier...</p>;
   }
 
-  const groupedCars = cars.reduce((accumulator, car) => {
+  const filteredCars =
+    selectedCarId === "ALL" ? cars : cars.filter((c) => String(c?._id) === String(selectedCarId));
+
+  const groupedCars = filteredCars.reduce((accumulator, car) => {
     const key = car.category || "AUTRE";
     if (!accumulator[key]) {
       accumulator[key] = [];
@@ -4096,25 +4366,97 @@ function CalendarView({ token }) {
   };
 
   const periodLabel =
-    viewMode === "week"
-      ? `${days[0]?.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} - ${
-          days[days.length - 1]?.toLocaleDateString("fr-FR", {
-            day: "numeric",
-            month: "short",
+    viewMode === "day"
+      ? cursorDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+      : viewMode === "week"
+        ? `${days[0]?.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} - ${
+            days[days.length - 1]?.toLocaleDateString("fr-FR", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })
+          }`
+        : cursorDate.toLocaleDateString("fr-FR", {
+            month: "long",
             year: "numeric",
-          })
-        }`
-      : currentMonth.toLocaleDateString("fr-FR", {
-          month: "long",
-          year: "numeric",
-        });
+          });
+
+  const dayForSummary = new Date(cursorDate);
+  const summary = (() => {
+    const rows = filteredCars.map((car) => {
+      const reservation = getReservationForCarOnDate(car._id, dayForSummary);
+      const block = getBlockForCarOnDate(car._id, dayForSummary);
+      if (block) return "BLOCKED";
+      if (reservation) return "RESERVED";
+      return "AVAILABLE";
+    });
+    return {
+      total: rows.length,
+      available: rows.filter((x) => x === "AVAILABLE").length,
+      reserved: rows.filter((x) => x === "RESERVED").length,
+      blocked: rows.filter((x) => x === "BLOCKED").length,
+    };
+  })();
+
+  function toDateInputValue(date) {
+    const d = new Date(date);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  async function handleCreateBlock(carId) {
+    if (!blockDraft.startDate || !blockDraft.endDate) {
+      alert("Merci de renseigner les dates.");
+      return;
+    }
+    setSavingBlock(true);
+    try {
+      await createBlockedPeriod(token, carId, {
+        startDate: blockDraft.startDate,
+        endDate: blockDraft.endDate,
+        reason: blockDraft.reason,
+      });
+      await loadCalendarData();
+      setCellModal(null);
+      setBlockDraft({ startDate: "", endDate: "", reason: "" });
+    } catch (err) {
+      alert(err.message || "Erreur lors du blocage");
+    } finally {
+      setSavingBlock(false);
+    }
+  }
+
+  async function handleDeleteBlock(blockId) {
+    if (!window.confirm("Supprimer ce blocage ?")) return;
+    try {
+      await deleteBlockedPeriod(token, blockId);
+      await loadCalendarData();
+      setCellModal(null);
+    } catch (err) {
+      alert(err.message || "Erreur lors de la suppression");
+    }
+  }
 
   return (
     <div className="calendar-view">
       <div className="calendar-header">
-        <h2>{periodLabel}</h2>
+        <div>
+          <h2>{periodLabel}</h2>
+          <div className="calendar-subtitle">
+            Parc: <strong>{summary.available}</strong> disponibles — <strong>{summary.reserved}</strong> réservées —{" "}
+            <strong>{summary.blocked}</strong> bloquées (sur la date sélectionnée)
+          </div>
+        </div>
         <div className="calendar-controls">
           <div className="calendar-mode-switch">
+            <button
+              className={`btn-calendar ${viewMode === "day" ? "active" : ""}`}
+              onClick={() => setViewMode("day")}
+            >
+              Jour
+            </button>
             <button
               className={`btn-calendar ${viewMode === "week" ? "active" : ""}`}
               onClick={() => setViewMode("week")}
@@ -4128,13 +4470,28 @@ function CalendarView({ token }) {
               Mois
             </button>
           </div>
-          <button className="btn-calendar" onClick={goToPreviousMonth}>
+          <div className="calendar-filters">
+            <select
+              className="calendar-select"
+              value={selectedCarId}
+              onChange={(e) => setSelectedCarId(e.target.value)}
+              title="Filtrer par véhicule"
+            >
+              <option value="ALL">Tous les véhicules</option>
+              {cars.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.brand} {c.model} — {c.licensePlate}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button className="btn-calendar" onClick={goToPrevious}>
             ◀ Précédent
           </button>
           <button className="btn-calendar" onClick={goToToday}>
             Aujourd'hui
           </button>
-          <button className="btn-calendar" onClick={goToNextMonth}>
+          <button className="btn-calendar" onClick={goToNext}>
             Suivant ▶
           </button>
         </div>
@@ -4214,7 +4571,20 @@ function CalendarView({ token }) {
                         new Date(reservation.startDate).toDateString() === day.toDateString();
 
                       return (
-                        <td key={i} className={className} title={title}>
+                        <td
+                          key={i}
+                          className={className}
+                          title={title}
+                          onClick={() => {
+                            setCellModal({ car, day, reservation, block });
+                            setBlockDraft({
+                              startDate: toDateInputValue(day),
+                              endDate: toDateInputValue(day),
+                              reason: "",
+                            });
+                          }}
+                          style={{ cursor: "pointer" }}
+                        >
                           {reservation && (
                             <div className="reservation-marker">
                               {isReservationStart ? (
@@ -4237,6 +4607,130 @@ function CalendarView({ token }) {
           </tbody>
         </table>
       </div>
+
+      {cellModal && (
+        <div
+          className="admin-modal-backdrop"
+          role="presentation"
+          onMouseDown={(e) => e.target === e.currentTarget && setCellModal(null)}
+        >
+          <div className="admin-modal" role="dialog" aria-modal="true" style={{ width: "min(760px, 100%)" }}>
+            <div className="admin-modal-top">
+              <div className="admin-modal-title">
+                {cellModal.car?.brand} {cellModal.car?.model} —{" "}
+                {new Date(cellModal.day).toLocaleDateString("fr-FR")}
+              </div>
+              <button
+                type="button"
+                className="admin-modal-close"
+                onClick={() => setCellModal(null)}
+                aria-label="Fermer"
+              >
+                ×
+              </button>
+            </div>
+            <div className="admin-modal-body">
+              {cellModal.block ? (
+                <div className="calendar-cell-modal">
+                  <div className="calendar-cell-modal-title">Créneau bloqué</div>
+                  <div className="calendar-cell-modal-row">
+                    <strong>Période</strong>
+                    <span>
+                      {new Date(cellModal.block.startDate).toLocaleDateString("fr-FR")} →{" "}
+                      {new Date(cellModal.block.endDate).toLocaleDateString("fr-FR")}
+                    </span>
+                  </div>
+                  <div className="calendar-cell-modal-row">
+                    <strong>Raison</strong>
+                    <span>{cellModal.block.reason || "Indisponibilité temporaire"}</span>
+                  </div>
+                  <div className="calendar-cell-modal-actions">
+                    <button type="button" className="btn-deactivate" onClick={() => handleDeleteBlock(cellModal.block._id)}>
+                      Supprimer le blocage
+                    </button>
+                  </div>
+                </div>
+              ) : cellModal.reservation ? (
+                <div className="calendar-cell-modal">
+                  <div className="calendar-cell-modal-title">Réservation</div>
+                  <div className="calendar-cell-modal-row">
+                    <strong>Client</strong>
+                    <span>
+                      {cellModal.reservation.user
+                        ? `${cellModal.reservation.user.firstName || ""} ${cellModal.reservation.user.lastName || ""}`.trim() ||
+                          cellModal.reservation.user.email
+                        : "Client"}
+                    </span>
+                  </div>
+                  <div className="calendar-cell-modal-row">
+                    <strong>Statut</strong>
+                    <span>{cellModal.reservation.status}</span>
+                  </div>
+                  <div className="calendar-cell-modal-row">
+                    <strong>Période</strong>
+                    <span>
+                      {new Date(cellModal.reservation.startDate).toLocaleDateString("fr-FR")} →{" "}
+                      {new Date(cellModal.reservation.endDate).toLocaleDateString("fr-FR")}
+                    </span>
+                  </div>
+                  <div className="calendar-cell-modal-hint">
+                    Ce créneau est déjà occupé: le système empêchera automatiquement les réservations en conflit.
+                  </div>
+                </div>
+              ) : (
+                <div className="calendar-cell-modal">
+                  <div className="calendar-cell-modal-title">Bloquer un créneau</div>
+                  <div className="calendar-cell-modal-hint">
+                    Utilise ça pour marquer un véhicule indisponible (panne, sinistre, entretien, etc.).
+                  </div>
+                  <div className="calendar-block-form">
+                    <div className="calendar-block-row">
+                      <div className="calendar-block-field">
+                        <label>Date début</label>
+                        <input
+                          type="date"
+                          value={blockDraft.startDate}
+                          onChange={(e) => setBlockDraft((p) => ({ ...p, startDate: e.target.value }))}
+                        />
+                      </div>
+                      <div className="calendar-block-field">
+                        <label>Date fin</label>
+                        <input
+                          type="date"
+                          value={blockDraft.endDate}
+                          onChange={(e) => setBlockDraft((p) => ({ ...p, endDate: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div className="calendar-block-field">
+                      <label>Raison</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Entretien, panne, sinistre…"
+                        value={blockDraft.reason}
+                        onChange={(e) => setBlockDraft((p) => ({ ...p, reason: e.target.value }))}
+                      />
+                    </div>
+                    <div className="calendar-cell-modal-actions">
+                      <button
+                        type="button"
+                        className="btn-approve"
+                        disabled={savingBlock}
+                        onClick={() => handleCreateBlock(cellModal.car._id)}
+                      >
+                        Bloquer
+                      </button>
+                      <button type="button" className="btn-calendar" onClick={() => setCellModal(null)}>
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

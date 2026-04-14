@@ -61,6 +61,16 @@ export function reviewUserDocument(token, userId, docType, payload) {
   });
 }
 
+export function reviewUserProfile(token, userId, payload) {
+  return apiFetch(`/api/admin/users/${userId}/profile-review`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 // Lister toutes les voitures (admin)
 export function getAllCars(token) {
   return apiFetch("/api/admin/cars", {
@@ -133,6 +143,23 @@ export function deleteMaintenanceRecord(token, recordId) {
 // Récupérer les périodes bloquées d'une voiture
 export function getBlockedPeriods(token, carId) {
   return apiFetch(`/api/admin/cars/${carId}/blocks`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+// Récupérer toutes les périodes bloquées (optionnellement filtrées)
+export function getAllBlockedPeriods(token, filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, value);
+    }
+  });
+
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiFetch(`/api/admin/blocks${suffix}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
