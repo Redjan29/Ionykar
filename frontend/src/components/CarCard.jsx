@@ -18,8 +18,6 @@ function CarCard({
   priceWeekend,
   imageUrl,
   imageUrls = [],
-  seats,
-  luggage,
   transmission,
   fuel,
   isAvailable = true,
@@ -33,7 +31,8 @@ function CarCard({
   const { formatPrice, language } = useAppContext();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [loadedIndex, setLoadedIndex] = useState(-1);
+  const imageLoaded = loadedIndex === activeImageIndex;
 
   const normalizeCarsFilename = (rawUrl) => {
     try {
@@ -89,8 +88,6 @@ function CarCard({
     return `/cars/${carId}`;
   };
 
-  const priceLabel =
-    language === "fr" ? "À partir de *" : "Starting from *";
   const perDayLabel =
     language === "fr" ? " / jour" : " / day";
 
@@ -107,21 +104,8 @@ function CarCard({
     });
   }, [pricePerDay, priceWeekday, priceWeekend, searchParams?.endDate, searchParams?.startDate]);
 
-  const includedKmForPeriod = useMemo(() => {
-    if (!pricingForPeriod?.days) return null;
-    const km = computeIncludedKm(pricingForPeriod.days);
-    if (!km) return null;
-    return km;
-  }, [pricingForPeriod?.days]);
-
-  useEffect(() => {
-    setActiveImageIndex(0);
-    setImageLoaded(false);
-  }, [carId, galleryImages.length]);
-
-  useEffect(() => {
-    setImageLoaded(false);
-  }, [activeImageIndex]);
+  const includedKmForPeriod =
+    pricingForPeriod?.days ? computeIncludedKm(pricingForPeriod.days) : null;
 
   useEffect(() => {
     if (!hovered || galleryImages.length <= 1) {
@@ -144,6 +128,7 @@ function CarCard({
         onMouseLeave={() => {
           setHovered(false);
           setActiveImageIndex(0);
+          setLoadedIndex(-1);
         }}
       >
         <img
@@ -169,9 +154,9 @@ function CarCard({
             if (current !== FALLBACK_CAR_IMAGE) {
               img.src = FALLBACK_CAR_IMAGE;
             }
-            setImageLoaded(true);
+            setLoadedIndex(activeImageIndex);
           }}
-          onLoad={() => setImageLoaded(true)}
+          onLoad={() => setLoadedIndex(activeImageIndex)}
         />
         {galleryImages.length > 1 && (
           <span className="car-card-image-counter">

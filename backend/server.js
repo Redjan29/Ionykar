@@ -4,6 +4,7 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 // import mongoSanitize from "express-mongo-sanitize"; // Temporarily disabled - causing issues with Node.js getters
+import cookieParser from "cookie-parser";
 import { connectDB } from "./src/config/db.js";
 import { errorHandler } from "./src/middlewares/errorHandler.js";
 import healthRoutes from "./src/routes/health.js";
@@ -72,6 +73,7 @@ const corsOptions = {
 // Security Middlewares
 app.use(helmet());
 app.use(cors(corsOptions));
+app.use(cookieParser());
 
 // Body parser with size limits (MUST be before mongoSanitize)
 // NOTE: documents are uploaded via multipart/form-data (multer) to avoid large JSON payloads.

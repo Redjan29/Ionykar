@@ -1,26 +1,17 @@
 import { apiFetch } from "./client";
 
-function getAuthHeaders() {
-  const token = localStorage.getItem("car_rental_token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
 export function getProfile() {
-  return apiFetch("/api/users/profile", {
-    headers: getAuthHeaders(),
-  });
+  return apiFetch("/api/users/profile");
 }
 
 export function updateProfile(profileData) {
   return apiFetch("/api/users/profile", {
     method: "PUT",
-    headers: getAuthHeaders(),
     body: JSON.stringify(profileData),
   });
 }
 
 export async function uploadMyDocument(docType, file) {
-  const token = localStorage.getItem("car_rental_token");
   const formData = new FormData();
   formData.append("file", file);
 
@@ -30,7 +21,7 @@ export async function uploadMyDocument(docType, file) {
     )}`,
     {
       method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
       body: formData,
     }
   );
@@ -44,13 +35,9 @@ export async function uploadMyDocument(docType, file) {
 }
 
 export function listMyInvoices() {
-  return apiFetch("/api/users/invoices", {
-    headers: getAuthHeaders(),
-  });
+  return apiFetch("/api/users/invoices");
 }
 
 export function listMyCreditNotes() {
-  return apiFetch("/api/users/credit-notes", {
-    headers: getAuthHeaders(),
-  });
+  return apiFetch("/api/users/credit-notes");
 }

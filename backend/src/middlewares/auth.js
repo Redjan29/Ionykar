@@ -2,18 +2,26 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/index.js";
 import { JWT_SECRET } from "../config/jwt.js";
 
+function extractToken(req) {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    return authHeader.substring(7);
+  }
+  // cookie-based auth (preferred)
+  if (req.cookies?.auth_token) {
+    return req.cookies.auth_token;
+  }
+  return null;
+}
+
 export function authMiddleware(req, res, next) {
   try {
-    // Récupération du token depuis le header Authorization
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const token = extractToken(req);
+    if (!token) {
       const err = new Error("No token provided");
       err.status = 401;
       throw err;
     }
-
-    const token = authHeader.substring(7); // Enlever "Bearer "
 
     // Vérification du token
     const decoded = jwt.verify(token, JWT_SECRET);
@@ -37,13 +45,8 @@ export function authMiddleware(req, res, next) {
 // Middleware optionnel : récupère l'utilisateur s'il est connecté, mais n'exige pas de token
 export function optionalAuth(req, res, next) {
   try {
-    const authHeader = req.headers.authorization;
-    
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.substring(7);
-      const decoded = jwt.verify(token, JWT_SECRET);
-      req.user = decoded;
-    }
+    const token = extractToken(req);
+    if (token) req.user = jwt.verify(token, JWT_SECRET);
     
     next();
   } catch (error) {

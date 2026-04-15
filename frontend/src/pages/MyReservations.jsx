@@ -39,7 +39,7 @@ function statusLabel(status) {
 }
 
 export default function MyReservations() {
-  const { isAuthenticated, token, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const { formatPrice, language } = useAppContext();
   const navigate = useNavigate();
 
@@ -54,20 +54,16 @@ export default function MyReservations() {
   }, [authLoading, isAuthenticated, navigate]);
 
   useEffect(() => {
-    if (!isAuthenticated || !token) {
-      setLoading(false);
-      return;
-    }
-
+    if (!isAuthenticated) return;
     loadReservations();
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated]);
 
   async function loadReservations() {
     setLoading(true);
     setError("");
 
     try {
-      const data = await getMyReservations(token);
+      const data = await getMyReservations();
       setReservations(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || "Impossible de charger vos réservations.");
@@ -83,7 +79,7 @@ export default function MyReservations() {
     }
 
     try {
-      await cancelMyReservation(token, reservationId);
+      await cancelMyReservation(reservationId);
       setReservations((prev) =>
         prev.map((r) => (r._id === reservationId ? { ...r, status: "CANCELLED" } : r))
       );

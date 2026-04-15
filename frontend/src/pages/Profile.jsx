@@ -111,7 +111,7 @@ export default function Profile() {
       ]);
       setInvoices(Array.isArray(invRes) ? invRes : invRes?.data || []);
       setCreditNotes(Array.isArray(cnRes) ? cnRes : cnRes?.data || []);
-    } catch (err) {
+    } catch {
       error("Erreur lors du chargement du profil");
     } finally {
       setLoading(false);

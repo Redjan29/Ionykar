@@ -6,6 +6,7 @@ import CarCard from "../components/CarCard";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import BackToTop from "../components/BackToTop.jsx";
+import Seo from "../components/Seo.jsx";
 import "./LandingPage.css";
 
 export default function LandingPage() {
@@ -14,6 +15,7 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const fieldId = (name) => `landing-search-${name}`;
   
   // Dates par défaut : aujourd'hui + 3 jours
   const today = new Date();
@@ -138,6 +140,47 @@ export default function LandingPage() {
 
   return (
     <>
+      <Seo
+        title="Location de voiture Paris 12 Bastille — IonyKar | 24h/24 7j/7"
+        description="Louez une voiture en quelques clics — 24h/24 et 7j/7. Réservation en ligne au départ de Paris 12e (Bastille), paiement sécurisé et documents automatisés."
+        canonicalPath="/"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "LocalBusiness",
+          name: "IonyKar",
+          description:
+            "Location de voiture courte et longue durée à Paris 12e (Bastille). Réservation 24h/24 7j/7, paiement sécurisé et documents automatisés.",
+          url: "https://www.ionykar.fr",
+          telephone: "+33-6-12-19-30-50",
+          priceRange: "€€",
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: "Paris",
+            postalCode: "75012",
+            addressCountry: "FR",
+          },
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: "48.8566",
+            longitude: "2.3522",
+          },
+          openingHoursSpecification: {
+            "@type": "OpeningHoursSpecification",
+            dayOfWeek: [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday",
+            ],
+            opens: "00:00",
+            closes: "23:59",
+          },
+          sameAs: [],
+        }}
+      />
       <Navbar />
       <div className="landing-page">
       {/* Hero Section */}
@@ -153,8 +196,9 @@ export default function LandingPage() {
           <div className="search-bar-container">
             <div className="search-bar">
               <div className="search-field">
-                <label>Station</label>
+                <label htmlFor={fieldId("station")}>Station</label>
                 <select
+                  id={fieldId("station")}
                   name="station"
                   value={searchParams.station}
                   onChange={handleSearchChange}
@@ -163,8 +207,9 @@ export default function LandingPage() {
                 </select>
               </div>
               <div className="search-field">
-                <label>Date de départ</label>
+                <label htmlFor={fieldId("startDate")}>Date de départ</label>
                 <input
+                  id={fieldId("startDate")}
                   type="date"
                   name="startDate"
                   value={searchParams.startDate}
@@ -174,8 +219,9 @@ export default function LandingPage() {
               </div>
               
               <div className="search-field">
-                <label>Heure de départ</label>
+                <label htmlFor={fieldId("startTime")}>Heure de départ</label>
                 <select
+                  id={fieldId("startTime")}
                   name="startTime"
                   value={searchParams.startTime}
                   onChange={handleSearchChange}
@@ -185,8 +231,9 @@ export default function LandingPage() {
               </div>
               
               <div className="search-field">
-                <label>Date de retour</label>
+                <label htmlFor={fieldId("endDate")}>Date de retour</label>
                 <input
+                  id={fieldId("endDate")}
                   type="date"
                   name="endDate"
                   value={searchParams.endDate}
@@ -196,8 +243,9 @@ export default function LandingPage() {
               </div>
               
               <div className="search-field">
-                <label>Heure de retour</label>
+                <label htmlFor={fieldId("endTime")}>Heure de retour</label>
                 <select
+                  id={fieldId("endTime")}
                   name="endTime"
                   value={searchParams.endTime}
                   onChange={handleSearchChange}

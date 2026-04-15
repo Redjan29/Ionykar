@@ -119,10 +119,6 @@ function CarPhotoHoverSlideshow({ car }) {
   const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
-    setActiveIndex(0);
-  }, [car?._id, images.length]);
-
-  useEffect(() => {
     if (!hovered || images.length <= 1) {
       return undefined;
     }
@@ -165,7 +161,7 @@ function CarPhotoHoverSlideshow({ car }) {
 
 
 export default function Admin() {
-  const { user, token, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [stats, setStats] = useState(null);
@@ -198,45 +194,45 @@ export default function Admin() {
   }, [isAuthenticated, user, navigate]);
 
   const loadData = useCallback(async () => {
-    if (!user?.isAdmin || !token) return;
+    if (!user?.isAdmin) return;
     setLoading(true);
     setError("");
 
     try {
       if (activeTab === "dashboard") {
-        const response = await getDashboardStats(token);
+        const response = await getDashboardStats();
         setStats(response);
       } else if (
         activeTab === "location-list" ||
         activeTab === "departures-returns" ||
         activeTab === "reservations"
       ) {
-        const response = await getAllReservations(token);
+        const response = await getAllReservations();
         setReservations(response);
       } else if (
         activeTab === "client-list" ||
         activeTab === "client-documents" ||
         activeTab === "users"
       ) {
-        const response = await getAllUsers(token);
+        const response = await getAllUsers();
         setUsers(response);
       } else if (activeTab === "cars" || activeTab === "fleet-categories") {
-        const response = await getAllCars(token);
+        const response = await getAllCars();
         setCars(response);
       } else if (activeTab === "maintenance") {
         const [carsResponse, maintenanceResponse] = await Promise.all([
-          getAllCars(token),
-          getMaintenanceRecords(token, { year: new Date().getFullYear() }),
+          getAllCars(),
+          getMaintenanceRecords({ year: new Date().getFullYear() }),
         ]);
         setCars(carsResponse);
         setMaintenanceData(maintenanceResponse);
       } else if (activeTab === "finance-profitability") {
-        const response = await getFinanceProfitability(token, financeFilters);
+        const response = await getFinanceProfitability(financeFilters);
         setFinanceProfitability(response);
       } else if (activeTab === "finance-expenses") {
         const [carsResponse, chargesResponse] = await Promise.all([
-          getAllCars(token),
-          getFinanceCharges(token, financeFilters),
+          getAllCars(),
+          getFinanceCharges(financeFilters),
         ]);
         setCars(carsResponse);
         setFinanceCharges(chargesResponse);
@@ -246,10 +242,10 @@ export default function Admin() {
         const granularity = monthNum ? "day" : "month";
 
         const [carsRes, summaryRes, seriesRes, seriesPrevRes] = await Promise.all([
-          getAllCars(token),
-          getFinanceSummary(token, financeFilters),
-          getFinanceRevenueTimeseries(token, { ...financeFilters, granularity }),
-          getFinanceRevenueTimeseries(token, {
+          getAllCars(),
+          getFinanceSummary(financeFilters),
+          getFinanceRevenueTimeseries({ ...financeFilters, granularity }),
+          getFinanceRevenueTimeseries({
             year: String(Number.isFinite(yearNum) ? yearNum - 1 : new Date().getFullYear() - 1),
             month: financeFilters.month || "",
             carId: financeFilters.carId || "",
@@ -266,7 +262,7 @@ export default function Admin() {
     } finally {
       setLoading(false);
     }
-  }, [user, token, activeTab, financeFilters.year, financeFilters.month, financeFilters.carId]);
+  }, [user, activeTab, financeFilters.year, financeFilters.month, financeFilters.carId]);
 
   // Charger les données initiales
   useEffect(() => {
@@ -275,7 +271,7 @@ export default function Admin() {
 
   async function handleUpdateReservationStatus(reservationId, newStatus) {
     try {
-      await updateReservationStatus(token, reservationId, newStatus);
+      await updateReservationStatus(reservationId, newStatus);
       loadData(); // Recharger les données
     } catch (err) {
       alert(err.message || "Erreur lors de la mise à jour");
@@ -284,7 +280,7 @@ export default function Admin() {
 
   async function handleToggleUserActive(userId, currentActive) {
     try {
-      await updateUser(token, userId, { isActive: !currentActive });
+      await updateUser(userId, { isActive: !currentActive });
       loadData();
     } catch (err) {
       alert(err.message || "Erreur lors de la mise à jour");
@@ -293,7 +289,7 @@ export default function Admin() {
 
   async function handleUpdateCar(carId, updates) {
     try {
-      await updateCar(token, carId, updates);
+      await updateCar(carId, updates);
       loadData();
     } catch (err) {
       alert(err.message || "Erreur lors de la mise à jour de la voiture");
@@ -303,7 +299,7 @@ export default function Admin() {
 
   async function handleCreateCar(payload) {
     try {
-      const createdCar = await createCar(token, payload);
+      const createdCar = await createCar(payload);
       await loadData();
       return createdCar;
     } catch (err) {
@@ -313,7 +309,7 @@ export default function Admin() {
 
   async function handleUpdateInvestment(carId, payload) {
     try {
-      await updateCarInvestment(token, carId, payload);
+      await updateCarInvestment(carId, payload);
       await loadData();
     } catch (err) {
       throw new Error(err.message || "Erreur lors de la mise à jour de l'investissement");
@@ -322,7 +318,7 @@ export default function Admin() {
 
   async function handleCreateFinanceCharge(payload) {
     try {
-      await createFinanceCharge(token, payload);
+      await createFinanceCharge(payload);
       await loadData();
     } catch (err) {
       throw new Error(err.message || "Erreur lors de la création de la charge");
@@ -331,7 +327,7 @@ export default function Admin() {
 
   async function handleDeleteFinanceCharge(chargeId) {
     try {
-      await deleteFinanceCharge(token, chargeId);
+      await deleteFinanceCharge(chargeId);
       await loadData();
     } catch (err) {
       throw new Error(err.message || "Erreur lors de la suppression de la charge");
@@ -535,14 +531,13 @@ export default function Admin() {
 
               {activeTab === "maintenance" && (
                 <MaintenanceView
-                  token={token}
                   cars={cars}
                   initialData={maintenanceData}
                 />
               )}
 
               {activeTab === "calendar" && (
-                <CalendarView token={token} />
+                <CalendarView />
               )}
 
               {activeTab === "departures-returns" && (
@@ -554,7 +549,7 @@ export default function Admin() {
               )}
 
               {activeTab === "client-documents" && (
-                <ClientDocumentsView users={users} token={token} onRefresh={loadData} />
+                <ClientDocumentsView users={users} onRefresh={loadData} />
               )}
 
               {activeTab === "finance-profitability" && (
@@ -868,7 +863,7 @@ function DocumentPreviewModal({ open, title, url, onClose }) {
   );
 }
 
-function ClientDocumentsView({ users = [], token, onRefresh }) {
+function ClientDocumentsView({ users = [], onRefresh }) {
   const [draftReasons, setDraftReasons] = useState({});
   const [savingKey, setSavingKey] = useState(null);
   const [query, setQuery] = useState("");
@@ -904,11 +899,10 @@ function ClientDocumentsView({ users = [], token, onRefresh }) {
   }, [docTypeFilter, query, statusFilter, users]);
 
   const handleApprove = async (userId, docType) => {
-    if (!token) return;
     const key = `${userId}:${docType}`;
     setSavingKey(key);
     try {
-      await reviewUserDocument(token, userId, docType, { status: "APPROVED" });
+      await reviewUserDocument(userId, docType, { status: "APPROVED" });
       onRefresh?.();
     } finally {
       setSavingKey(null);
@@ -916,7 +910,6 @@ function ClientDocumentsView({ users = [], token, onRefresh }) {
   };
 
   const handleReject = async (userId, docType) => {
-    if (!token) return;
     const key = `${userId}:${docType}`;
     const reason = String(draftReasons[key] || "").trim();
     if (reason.length < 3) {
@@ -925,7 +918,7 @@ function ClientDocumentsView({ users = [], token, onRefresh }) {
     }
     setSavingKey(key);
     try {
-      await reviewUserDocument(token, userId, docType, { status: "REJECTED", rejectedReason: reason });
+      await reviewUserDocument(userId, docType, { status: "REJECTED", rejectedReason: reason });
       onRefresh?.();
     } finally {
       setSavingKey(null);
@@ -1737,6 +1730,8 @@ function FinanceChargesView({
 }
 
 function FinanceSummaryView({ summary, revenueSeries, revenueSeriesPrev, cars = [], financeFilters, onChangeFinanceFilters }) {
+  const [chartView, setChartView] = useState("CA_BAR"); // CA_BAR | CA_LINE | CHARGES_PIE
+
   if (!summary) {
     return (
       <div className="empty-state">
@@ -1748,11 +1743,9 @@ function FinanceSummaryView({ summary, revenueSeries, revenueSeriesPrev, cars = 
   const totals = summary.totals || {};
   const points = Array.isArray(revenueSeries?.points) ? revenueSeries.points : [];
   const prevPoints = Array.isArray(revenueSeriesPrev?.points) ? revenueSeriesPrev.points : [];
-  const maxRevenue = Math.max(1, ...points.map((p) => Number(p.revenue || 0)));
   const currentPaidRevenue = points.reduce((acc, p) => acc + (Number(p.revenue || 0) || 0), 0);
   const prevPaidRevenue = prevPoints.reduce((acc, p) => acc + (Number(p.revenue || 0) || 0), 0);
   const deltaPct = prevPaidRevenue > 0 ? ((currentPaidRevenue - prevPaidRevenue) / prevPaidRevenue) * 100 : null;
-  const [chartView, setChartView] = useState("CA_BAR"); // CA_BAR | CA_LINE | CHARGES_PIE
 
   function downloadCsv() {
     const rows = [
@@ -2205,7 +2198,7 @@ function formatMaintenanceCategory(category) {
   return labels[category] || category;
 }
 
-function MaintenanceView({ token, cars = [], initialData }) {
+function MaintenanceView({ cars = [], initialData }) {
   const currentYear = new Date().getFullYear();
   const [records, setRecords] = useState(initialData?.records || []);
   const [summary, setSummary] = useState(initialData?.summary || null);
@@ -2236,7 +2229,7 @@ function MaintenanceView({ token, cars = [], initialData }) {
   async function loadRecords(nextFilters = filters) {
     setLoading(true);
     try {
-      const response = await getMaintenanceRecords(token, nextFilters);
+      const response = await getMaintenanceRecords(nextFilters);
       setRecords(response.records || []);
       setSummary(response.summary || null);
     } catch (err) {
@@ -2255,7 +2248,7 @@ function MaintenanceView({ token, cars = [], initialData }) {
     }
 
     try {
-      await createMaintenanceRecord(token, {
+      await createMaintenanceRecord({
         ...formData,
         cost: Number(formData.cost),
         durationDays: Number(formData.durationDays || 1),
@@ -2284,7 +2277,7 @@ function MaintenanceView({ token, cars = [], initialData }) {
     }
 
     try {
-      await deleteMaintenanceRecord(token, recordId);
+      await deleteMaintenanceRecord(recordId);
       await loadRecords();
     } catch (err) {
       alert(err.message || "Erreur lors de la suppression");
@@ -2813,7 +2806,7 @@ function DossierStatusPill({ status }) {
   return <span className={`kyc-pill ${classMap[normalized] || "kyc-pill-pending"}`}>{labelMap[normalized] || normalized}</span>;
 }
 
-function ClientProfileModal({ open, user, token, onClose, onRefresh }) {
+function ClientProfileModal({ open, user, onClose, onRefresh }) {
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -2853,10 +2846,9 @@ function ClientProfileModal({ open, user, token, onClose, onRefresh }) {
   };
 
   const handleApprove = async () => {
-    if (!token) return;
     setSaving(true);
     try {
-      await reviewUserProfile(token, user._id, { status: "APPROVED" });
+      await reviewUserProfile(user._id, { status: "APPROVED" });
       onRefresh?.();
       onClose?.();
     } finally {
@@ -2865,7 +2857,6 @@ function ClientProfileModal({ open, user, token, onClose, onRefresh }) {
   };
 
   const handleReject = async () => {
-    if (!token) return;
     const trimmed = String(reason || "").trim();
     if (trimmed.length < 3) {
       alert("Merci de renseigner un motif (min. 3 caractères).");
@@ -2873,7 +2864,7 @@ function ClientProfileModal({ open, user, token, onClose, onRefresh }) {
     }
     setSaving(true);
     try {
-      await reviewUserProfile(token, user._id, { status: "REJECTED", rejectedReason: trimmed });
+      await reviewUserProfile(user._id, { status: "REJECTED", rejectedReason: trimmed });
       onRefresh?.();
       onClose?.();
     } finally {
@@ -2982,7 +2973,6 @@ function ClientProfileModal({ open, user, token, onClose, onRefresh }) {
 
 // Liste des utilisateurs
 function UsersView({ users = [], onToggleActive }) {
-  const { token } = useAuth();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [from, setFrom] = useState("");
@@ -3026,7 +3016,6 @@ function UsersView({ users = [], onToggleActive }) {
       <ClientProfileModal
         open={Boolean(selectedUser)}
         user={selectedUser}
-        token={token}
         onClose={() => setSelectedUser(null)}
         onRefresh={() => {}}
       />
@@ -3118,7 +3107,7 @@ function UsersView({ users = [], onToggleActive }) {
 }
 
 // Modal pour gérer les périodes bloquées
-function BlockedPeriodsModal({ car, token, onClose }) {
+function BlockedPeriodsModal({ car, onClose }) {
   const [blockedPeriods, setBlockedPeriods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
@@ -3134,7 +3123,7 @@ function BlockedPeriodsModal({ car, token, onClose }) {
   async function loadBlockedPeriods() {
     setLoading(true);
     try {
-      const response = await getBlockedPeriods(token, car._id);
+      const response = await getBlockedPeriods(car._id);
       setBlockedPeriods(response);
     } catch (err) {
       alert(err.message || "Erreur lors du chargement des blocages");
@@ -3152,7 +3141,7 @@ function BlockedPeriodsModal({ car, token, onClose }) {
     }
 
     try {
-      await createBlockedPeriod(token, car._id, formData);
+      await createBlockedPeriod(car._id, formData);
       setFormData({ startDate: "", endDate: "", reason: "" });
       loadBlockedPeriods();
     } catch (err) {
@@ -3166,7 +3155,7 @@ function BlockedPeriodsModal({ car, token, onClose }) {
     }
 
     try {
-      await deleteBlockedPeriod(token, blockId);
+      await deleteBlockedPeriod(blockId);
       loadBlockedPeriods();
     } catch (err) {
       alert(err.message || "Erreur lors de la suppression");
@@ -3255,7 +3244,6 @@ function BlockedPeriodsModal({ car, token, onClose }) {
 }
 
 function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
-  const { token } = useAuth();
   const [editingCarId, setEditingCarId] = useState(null);
   const [selectedCarForBlocks, setSelectedCarForBlocks] = useState(null);
   const [selectedCarId, setSelectedCarId] = useState(null);
@@ -3308,14 +3296,14 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
 
   const uploadImage = useCallback(
     async (file) => {
-      const response = await uploadCarImagesApi(token, [file]);
+      const response = await uploadCarImagesApi([file]);
       const firstUrl = response?.urls?.[0];
       if (!firstUrl) {
         throw new Error("Échec de l'upload de l'image");
       }
       return firstUrl;
     },
-    [token]
+    []
   );
 
   const handleStartEdit = (car) => {
@@ -3347,50 +3335,6 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
 
   const handleCancelEdit = () => {
     setEditingCarId(null);
-  };
-
-  const handleSave = async () => {
-    if (!editingCarId) {
-      return;
-    }
-
-    const toOptionalInt = (value) => {
-      if (value === "" || value === undefined || value === null) return undefined;
-      const n = Number.parseInt(String(value), 10);
-      return Number.isFinite(n) ? n : undefined;
-    };
-    const toOptionalNumber = (value) => {
-      if (value === "" || value === undefined || value === null) return undefined;
-      const n = Number(value);
-      return Number.isFinite(n) ? n : undefined;
-    };
-
-    try {
-      await onUpdateCar(editingCarId, {
-        brand: formData.brand?.trim(),
-        model: formData.model?.trim(),
-        licensePlate: formData.licensePlate.trim().toUpperCase(),
-        category: formData.category,
-        // keep legacy pricePerDay aligned for older screens
-        pricePerDay: Number(formData.priceWeekday || formData.pricePerDay),
-        priceWeekday: Number(formData.priceWeekday),
-        priceWeekend: Number(formData.priceWeekend),
-        year: toOptionalInt(formData.year),
-        mileage: toOptionalNumber(formData.mileage),
-        doors: toOptionalInt(formData.doors),
-        color: formData.color,
-        description: formData.description,
-        status: formData.status,
-        seats: toOptionalInt(formData.seats),
-        luggage: toOptionalInt(formData.luggage),
-        transmission: formData.transmission,
-        fuel: formData.fuel,
-        imageUrl: formData.imageUrl,
-      });
-      setEditingCarId(null);
-    } catch (err) {
-      // keep edit mode so the user can fix inputs
-    }
   };
 
   const resetCreateForm = () => {
@@ -4087,7 +4031,6 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
           <div className="vehicle-file-panel">
             <VehicleFileCard
               car={cars.find(c => c._id === selectedCarId)}
-              token={token}
               onUpdateCar={onUpdateCar}
               onManageBlocks={setSelectedCarForBlocks}
               onClose={() => setVehicleFilePanelOpen(false)}
@@ -4099,7 +4042,6 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
       {selectedCarForBlocks && (
         <BlockedPeriodsModal
           car={selectedCarForBlocks}
-          token={token}
           onClose={() => setSelectedCarForBlocks(null)}
         />
       )}
@@ -4107,7 +4049,7 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
   );
 }
 
-function VehicleFileCard({ car, token, onUpdateCar, onManageBlocks, onClose }) {
+function VehicleFileCard({ car, onUpdateCar, onManageBlocks, onClose }) {
   const currentYear = new Date().getFullYear();
   const [activeSection, setActiveSection] = useState("identity");
   const [loading, setLoading] = useState(true);
@@ -4176,9 +4118,9 @@ function VehicleFileCard({ car, token, onUpdateCar, onManageBlocks, onClose }) {
       setLoading(true);
       try {
         const [maintenanceResponse, blockedPeriodsResponse, reservationsResponse] = await Promise.all([
-          getMaintenanceRecords(token, { carId: car._id, year: currentYear }),
-          getBlockedPeriods(token, car._id),
-          getAllReservations(token),
+          getMaintenanceRecords({ carId: car._id, year: currentYear }),
+          getBlockedPeriods(car._id),
+          getAllReservations(),
         ]);
 
         const vehicleReservations = (reservationsResponse || []).filter((reservation) => {
@@ -4216,7 +4158,7 @@ function VehicleFileCard({ car, token, onUpdateCar, onManageBlocks, onClose }) {
         setMaintenanceSummary(maintenanceResponse.summary || null);
         setMaintenanceRecords(maintenanceResponse.records || []);
         setBlockedPeriods(blockedPeriodsResponse || []);
-      } catch (err) {
+      } catch {
         setMaintenanceSummary(null);
         setMaintenanceRecords([]);
         setBlockedPeriods([]);
@@ -4232,7 +4174,7 @@ function VehicleFileCard({ car, token, onUpdateCar, onManageBlocks, onClose }) {
     }
 
     loadVehicleFile();
-  }, [car._id, currentYear, token]);
+  }, [car._id, currentYear]);
 
   const nextBlocks = blockedPeriods.slice(0, 3);
   const activeGalleryImage = galleryImages[activeGalleryIndex] || "";
@@ -4253,7 +4195,7 @@ function VehicleFileCard({ car, token, onUpdateCar, onManageBlocks, onClose }) {
     setGallerySaving(true);
 
     try {
-      const response = await uploadCarImagesApi(token, files);
+      const response = await uploadCarImagesApi(files);
       const uploadedUrls = Array.isArray(response?.urls) ? response.urls : [];
       if (uploadedUrls.length === 0) {
         throw new Error("Aucune image n'a été uploadée.");
@@ -4703,7 +4645,7 @@ function VehicleFileCard({ car, token, onUpdateCar, onManageBlocks, onClose }) {
 }
 
 // Vue calendrier
-function CalendarView({ token }) {
+function CalendarView() {
   const [cars, setCars] = useState([]);
   const [reservations, setReservations] = useState([]);
   const [blockedPeriods, setBlockedPeriods] = useState([]);
@@ -4723,15 +4665,15 @@ function CalendarView({ token }) {
     setLoading(true);
     try {
       const [carsRes, reservationsRes] = await Promise.all([
-        getAllCars(token),
-        getAllReservations(token),
+        getAllCars(),
+        getAllReservations(),
       ]);
 
       setCars(carsRes);
       setReservations(reservationsRes);
 
       // Charger tous les blocages en une seule requête (plus rapide)
-      const blocksRes = await getAllBlockedPeriods(token).catch(() => []);
+      const blocksRes = await getAllBlockedPeriods().catch(() => []);
       setBlockedPeriods(Array.isArray(blocksRes) ? blocksRes : []);
     } catch (err) {
       alert(err.message || "Erreur lors du chargement du calendrier");
@@ -4903,7 +4845,7 @@ function CalendarView({ token }) {
     }
     setSavingBlock(true);
     try {
-      await createBlockedPeriod(token, carId, {
+      await createBlockedPeriod(carId, {
         startDate: blockDraft.startDate,
         endDate: blockDraft.endDate,
         reason: blockDraft.reason,
@@ -4921,7 +4863,7 @@ function CalendarView({ token }) {
   async function handleDeleteBlock(blockId) {
     if (!window.confirm("Supprimer ce blocage ?")) return;
     try {
-      await deleteBlockedPeriod(token, blockId);
+      await deleteBlockedPeriod(blockId);
       await loadCalendarData();
       setCellModal(null);
     } catch (err) {

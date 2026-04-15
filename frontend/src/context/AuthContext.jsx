@@ -1,77 +1,50 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from "react";
-import { login as apiLogin, register as apiRegister, getProfile } from "../api/auth";
+import { login as apiLogin, register as apiRegister, getProfile, logout as apiLogout } from "../api/auth";
 
 const AuthContext = createContext(null);
 
-const TOKEN_KEY = "car_rental_token";
-const USER_KEY = "car_rental_user";
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Chargement initial depuis localStorage
+  // Chargement initial depuis cookie httpOnly (appel profile)
   useEffect(() => {
-    const savedToken = localStorage.getItem(TOKEN_KEY);
-    const savedUser = localStorage.getItem(USER_KEY);
-
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-      
-      // Vérification du token en arrière-plan
-      getProfile(savedToken)
-        .then((data) => {
-          setUser(data);
-          localStorage.setItem(USER_KEY, JSON.stringify(data));
-        })
-        .catch(() => {
-          // Token invalide ou expiré
-          logout();
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
-    }
+    getProfile()
+      .then((data) => setUser(data))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
   }, []);
 
   async function login(email, password) {
     const response = await apiLogin({ email, password });
-    const { user: userData, token: userToken } = response;
+    const { user: userData } = response;
 
     setUser(userData);
-    setToken(userToken);
-    localStorage.setItem(TOKEN_KEY, userToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(userData));
 
     return userData;
   }
 
   async function register(userData) {
     const response = await apiRegister(userData);
-    const { user: newUser, token: userToken } = response;
+    const { user: newUser } = response;
 
     setUser(newUser);
-    setToken(userToken);
-    localStorage.setItem(TOKEN_KEY, userToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(newUser));
 
     return newUser;
   }
 
-  function logout() {
+  async function logout() {
+    try {
+      await apiLogout();
+    } catch {
+      // ignore
+    }
     setUser(null);
-    setToken(null);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
   }
 
   const value = {
     user,
-    token,
     login,
     register,
     logout,

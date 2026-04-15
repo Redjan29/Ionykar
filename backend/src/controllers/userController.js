@@ -217,6 +217,11 @@ export async function downloadMyInvoicePdf(req, res, next) {
       err.status = 404;
       throw err;
     }
+    if (!invoice.pdfUrl || typeof invoice.pdfUrl !== "string" || !invoice.pdfUrl.startsWith("/uploads/")) {
+      const err = new Error("Invalid invoice URL");
+      err.status = 400;
+      throw err;
+    }
     res.redirect(invoice.pdfUrl);
   } catch (error) {
     next(error);
@@ -249,6 +254,11 @@ export async function downloadMyCreditNotePdf(req, res, next) {
     if (!creditNote.pdfUrl) {
       const err = new Error("Credit note PDF not available");
       err.status = 404;
+      throw err;
+    }
+    if (!creditNote.pdfUrl || typeof creditNote.pdfUrl !== "string" || !creditNote.pdfUrl.startsWith("/uploads/")) {
+      const err = new Error("Invalid credit note URL");
+      err.status = 400;
       throw err;
     }
     res.redirect(creditNote.pdfUrl);

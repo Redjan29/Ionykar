@@ -1,0 +1,54 @@
+.notfound {
+  min-height: calc(100vh - 160px);
+  display: grid;
+  place-items: center;
+  padding: 40px 18px;
+}
+
+.notfound-card {
+  width: min(720px, 100%);
+  background: var(--ik-surface);
+  border: 1px solid var(--ik-border);
+  border-radius: var(--ik-radius-lg);
+  padding: 28px 22px;
+  box-shadow: var(--ik-shadow-md);
+}
+
+.notfound-card h1 {
+  margin: 0 0 8px 0;
+  font-family: var(--ik-font-title);
+  font-size: 32px;
+}
+
+.notfound-card p {
+  margin: 0 0 18px 0;
+  color: var(--ik-muted);
+}
+
+.notfound-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.notfound-primary,
+.notfound-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.notfound-primary {
+  background: var(--ik-yellow);
+  color: var(--ik-black);
+}
+
+.notfound-secondary {
+  border: 1px solid var(--ik-border);
+  color: var(--ik-white);
+}
+

@@ -6,6 +6,7 @@ import Footer from "../components/Footer";
 import { fetchCars } from "../api/cars";
 import { useAuth } from "../context/AuthContext.jsx";
 import CarDetailsModal from "../components/CarDetailsModal.jsx";
+import Seo from "../components/Seo.jsx";
 import "./CarsPage.css";
 
 function CarsPage() {
@@ -15,6 +16,7 @@ function CarsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedCar, setSelectedCar] = useState(null);
+  const fieldId = (name) => `cars-${name}`;
   const shouldRedirectAdmin = !authLoading && isAuthenticated && user?.isAdmin;
   
   const formatDate = (date) => {
@@ -72,20 +74,6 @@ function CarsPage() {
 
   const modalCarId = searchParams.get("car") || "";
   const hasSelectedDates = Boolean(urlState.startDate && urlState.endDate);
-
-  useEffect(() => {
-    setCriteria({
-      station: urlState.station || "bastille",
-      startDate: urlState.startDate || formatDate(today),
-      startTime: urlState.startTime || "09:00",
-      endDate: urlState.endDate || formatDate(threeDaysLater),
-      endTime: urlState.endTime || "18:00",
-    });
-    setFilters({
-      category: urlState.category || "",
-      transmission: urlState.transmission || "",
-    });
-  }, [threeDaysLater, today, urlState]);
 
   const generateTimeOptions = () => {
     const options = [];
@@ -239,6 +227,11 @@ function CarsPage() {
 
   return (
     <>
+      <Seo
+        title="Voitures disponibles — IonyKar"
+        description="Consultez les véhicules disponibles et réservez en ligne 24h/24 au départ de Paris 12e (Bastille)."
+        canonicalPath="/cars"
+      />
       <Navbar />
       <div className="cars-page">
         <section className="cars-criteria">
@@ -268,14 +261,20 @@ function CarsPage() {
             <div className="cars-criteria-panel">
               <div className="cars-criteria-grid">
                 <div className="cars-field">
-                  <label>Station</label>
-                  <select name="station" value={criteria.station} onChange={handleCriteriaChange}>
+                  <label htmlFor={fieldId("station")}>Station</label>
+                  <select
+                    id={fieldId("station")}
+                    name="station"
+                    value={criteria.station}
+                    onChange={handleCriteriaChange}
+                  >
                     <option value="bastille">Paris 12e — Bastille</option>
                   </select>
                 </div>
                 <div className="cars-field">
-                  <label>Date de départ</label>
+                  <label htmlFor={fieldId("startDate")}>Date de départ</label>
                   <input
+                    id={fieldId("startDate")}
                     type="date"
                     name="startDate"
                     value={criteria.startDate}
@@ -285,8 +284,9 @@ function CarsPage() {
                   />
                 </div>
                 <div className="cars-field">
-                  <label>Heure de départ</label>
+                  <label htmlFor={fieldId("startTime")}>Heure de départ</label>
                   <select
+                    id={fieldId("startTime")}
                     name="startTime"
                     value={criteria.startTime}
                     onChange={handleCriteriaChange}
@@ -295,8 +295,9 @@ function CarsPage() {
                   </select>
                 </div>
                 <div className="cars-field">
-                  <label>Date de retour</label>
+                  <label htmlFor={fieldId("endDate")}>Date de retour</label>
                   <input
+                    id={fieldId("endDate")}
                     type="date"
                     name="endDate"
                     value={criteria.endDate}
@@ -306,8 +307,13 @@ function CarsPage() {
                   />
                 </div>
                 <div className="cars-field">
-                  <label>Heure de retour</label>
-                  <select name="endTime" value={criteria.endTime} onChange={handleCriteriaChange}>
+                  <label htmlFor={fieldId("endTime")}>Heure de retour</label>
+                  <select
+                    id={fieldId("endTime")}
+                    name="endTime"
+                    value={criteria.endTime}
+                    onChange={handleCriteriaChange}
+                  >
                     {generateTimeOptions()}
                   </select>
                 </div>
@@ -322,8 +328,13 @@ function CarsPage() {
 
           <div className="cars-filters">
             <div className="cars-field">
-              <label>Catégorie</label>
-              <select name="category" value={filters.category} onChange={handleFilterChange}>
+              <label htmlFor={fieldId("category")}>Catégorie</label>
+              <select
+                id={fieldId("category")}
+                name="category"
+                value={filters.category}
+                onChange={handleFilterChange}
+              >
                 <option value="">Toutes</option>
                 <option value="CITADINE">Citadine</option>
                 <option value="BERLINE">Berline</option>
@@ -333,8 +344,13 @@ function CarsPage() {
               </select>
             </div>
             <div className="cars-field">
-              <label>Transmission</label>
-              <select name="transmission" value={filters.transmission} onChange={handleFilterChange}>
+              <label htmlFor={fieldId("transmission")}>Transmission</label>
+              <select
+                id={fieldId("transmission")}
+                name="transmission"
+                value={filters.transmission}
+                onChange={handleFilterChange}
+              >
                 <option value="">Toutes</option>
                 <option value="AUTO">Automatique</option>
                 <option value="MANUELLE">Manuelle</option>

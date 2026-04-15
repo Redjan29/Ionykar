@@ -10,6 +10,7 @@ import "./BookingForm.css";
 export default function BookingForm({ car, onClose, initialDates, mode = "modal" }) {
   const { login: authLogin, isAuthenticated, user } = useAuth();
   const { toasts, hideToast, success, error, warning } = useToast();
+  const fieldId = (name) => `booking-${name}`;
   const formatEUR = (value) =>
     Number.isFinite(value)
       ? new Intl.NumberFormat("fr-FR", {
@@ -291,8 +292,9 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
               {!isAuthenticated && (
                 <>
                   <div className="booking-form-group">
-                    <label>Prénom</label>
+                    <label htmlFor={fieldId("firstName")}>Prénom</label>
                     <input
+                      id={fieldId("firstName")}
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleChange}
@@ -301,8 +303,9 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
                   </div>
 
                   <div className="booking-form-group">
-                    <label>Nom</label>
+                    <label htmlFor={fieldId("lastName")}>Nom</label>
                     <input
+                      id={fieldId("lastName")}
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleChange}
@@ -311,8 +314,9 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
                   </div>
 
                   <div className="booking-form-group">
-                    <label>Email</label>
+                    <label htmlFor={fieldId("email")}>Email</label>
                     <input
+                      id={fieldId("email")}
                       type="email"
                       name="email"
                       value={formData.email}
@@ -322,8 +326,9 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
                   </div>
 
                   <div className="booking-form-group">
-                    <label>Téléphone</label>
+                    <label htmlFor={fieldId("phone")}>Téléphone</label>
                     <input
+                      id={fieldId("phone")}
                       type="tel"
                       name="phone"
                       value={formData.phone}
@@ -333,8 +338,9 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
                   </div>
 
                   <div className="booking-form-group">
-                    <label>Numéro de permis</label>
+                    <label htmlFor={fieldId("licenseNumber")}>Numéro de permis</label>
                     <input
+                      id={fieldId("licenseNumber")}
                       name="licenseNumber"
                       value={formData.licenseNumber}
                       onChange={handleChange}
@@ -345,8 +351,9 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
                   </div>
 
                   <div className="booking-form-group">
-                    <label>Expiration permis</label>
+                    <label htmlFor={fieldId("licenseExpiry")}>Expiration permis</label>
                     <input
+                      id={fieldId("licenseExpiry")}
                       type="date"
                       name="licenseExpiry"
                       value={formData.licenseExpiry}
@@ -359,8 +366,9 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
               {mode !== "checkout" && (
                 <>
                   <div className="booking-form-group">
-                    <label>Date de début</label>
+                    <label htmlFor={fieldId("startDate")}>Date de début</label>
                     <input
+                      id={fieldId("startDate")}
                       type="date"
                       name="startDate"
                       value={formData.startDate}
@@ -370,8 +378,9 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
                   </div>
 
                   <div className="booking-form-group">
-                    <label>Heure de début</label>
+                    <label htmlFor={fieldId("startTime")}>Heure de début</label>
                     <select
+                      id={fieldId("startTime")}
                       name="startTime"
                       value={formData.startTime}
                       onChange={handleChange}
@@ -401,8 +410,9 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
                   </div>
 
                   <div className="booking-form-group">
-                    <label>Date de fin</label>
+                    <label htmlFor={fieldId("endDate")}>Date de fin</label>
                     <input
+                      id={fieldId("endDate")}
                       type="date"
                       name="endDate"
                       value={formData.endDate}
@@ -412,8 +422,9 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
                   </div>
 
                   <div className="booking-form-group">
-                    <label>Heure de fin</label>
+                    <label htmlFor={fieldId("endTime")}>Heure de fin</label>
                     <select
+                      id={fieldId("endTime")}
                       name="endTime"
                       value={formData.endTime}
                       onChange={handleChange}
@@ -552,8 +563,11 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
 
           <form onSubmit={handleCreateAccount} className="account-form">
             <div className="booking-form-group">
-                <label>Mot de passe (min. 8 caractères + 1 chiffre)</label>
+              <label htmlFor={fieldId("accountPassword")}>
+                Mot de passe (min. 8 caractères + 1 chiffre)
+              </label>
               <input
+                id={fieldId("accountPassword")}
                 type="password"
                 value={accountPassword}
                 onChange={(e) => setAccountPassword(e.target.value)}

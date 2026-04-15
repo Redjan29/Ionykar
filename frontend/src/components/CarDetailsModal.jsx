@@ -63,10 +63,13 @@ export default function CarDetailsModal({ carId, initialDates, onClose }) {
 
   useEffect(() => {
     let isMounted = true;
-    setLoading(true);
-    setError("");
-    setCar(null);
-    // keep modal on details; booking is full-page checkout now
+    Promise.resolve().then(() => {
+      if (!isMounted) return;
+      setLoading(true);
+      setError("");
+      setCar(null);
+      setActiveImageIndex(0);
+    });
 
     fetchCarById(carId)
       .then((data) => {
@@ -86,10 +89,6 @@ export default function CarDetailsModal({ carId, initialDates, onClose }) {
       isMounted = false;
     };
   }, [carId]);
-
-  useEffect(() => {
-    setActiveImageIndex(0);
-  }, [carId, galleryImages.length]);
 
   useEffect(() => {
     const onKeyDown = (e) => {

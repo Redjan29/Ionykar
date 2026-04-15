@@ -1,6 +1,5 @@
 // src/data/cars.js
 import peugeot308 from "../assets/peugeot-308-sw-night.jpeg";
-import corsa from "../assets/opel-corsa-silver.jpeg";
 import peugeot508Paris from "../assets/peugeot-508.jpeg";
 import nissanMicraBlack from "../assets/nissan-micra-black.jpeg";
 import opelCorsaRed from "../assets/opel-corsa-red.jpeg";

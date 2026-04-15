@@ -42,7 +42,7 @@ function statusLabel(status, language) {
 }
 
 export default function ReservationConfirmation() {
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { language, formatPrice } = useAppContext();
   const [searchParams] = useSearchParams();
   const reservationId = searchParams.get("id") || "";
@@ -53,10 +53,14 @@ export default function ReservationConfirmation() {
 
   useEffect(() => {
     let isMounted = true;
-    if (!token || !reservationId) return undefined;
-    setLoading(true);
-    setError("");
-    getReservationById(token, reservationId)
+    if (!reservationId) return undefined;
+    Promise.resolve().then(() => {
+      if (!isMounted) return;
+      setLoading(true);
+      setError("");
+      setReservation(null);
+    });
+    getReservationById(reservationId)
       .then((data) => {
         if (!isMounted) return;
         setReservation(data);
@@ -73,7 +77,7 @@ export default function ReservationConfirmation() {
     return () => {
       isMounted = false;
     };
-  }, [reservationId, token]);
+  }, [reservationId]);
 
   const includedKm = useMemo(() => computeIncludedKm(reservation?.numberOfDays), [reservation?.numberOfDays]);
   const options = useMemo(() => parseOptionsFromNotes(reservation?.notes), [reservation?.notes]);

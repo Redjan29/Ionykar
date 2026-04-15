@@ -14,12 +14,12 @@ export function login(credentials) {
   });
 }
 
-export function getProfile(token) {
-  return apiFetch("/api/auth/profile", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export function getProfile() {
+  return apiFetch("/api/auth/profile");
+}
+
+export function logout() {
+  return apiFetch("/api/auth/logout", { method: "POST" });
 }
 
 export function activateAccount(email, password) {

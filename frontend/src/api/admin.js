@@ -1,109 +1,75 @@
 import { apiFetch } from "./client";
 
 // Récupérer les stats du dashboard
-export function getDashboardStats(token) {
-  return apiFetch("/api/admin/stats", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export function getDashboardStats() {
+  return apiFetch("/api/admin/stats");
 }
 
 // Lister toutes les réservations
-export function getAllReservations(token, filters = {}) {
+export function getAllReservations(filters = {}) {
   const params = new URLSearchParams(filters);
-  return apiFetch(`/api/admin/reservations?${params}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  return apiFetch(`/api/admin/reservations?${params}`);
 }
 
 // Mettre à jour le statut d'une réservation
-export function updateReservationStatus(token, reservationId, status, notes) {
+export function updateReservationStatus(reservationId, status, notes) {
   return apiFetch(`/api/admin/reservations/${reservationId}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status, notes }),
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
 // Lister tous les utilisateurs
-export function getAllUsers(token, filters = {}) {
+export function getAllUsers(filters = {}) {
   const params = new URLSearchParams(filters);
-  return apiFetch(`/api/admin/users?${params}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  return apiFetch(`/api/admin/users?${params}`);
 }
 
 // Mettre à jour un utilisateur
-export function updateUser(token, userId, updates) {
+export function updateUser(userId, updates) {
   return apiFetch(`/api/admin/users/${userId}`, {
     method: "PATCH",
     body: JSON.stringify(updates),
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
-export function reviewUserDocument(token, userId, docType, payload) {
+export function reviewUserDocument(userId, docType, payload) {
   return apiFetch(`/api/admin/users/${userId}/documents/${docType}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
-export function reviewUserProfile(token, userId, payload) {
+export function reviewUserProfile(userId, payload) {
   return apiFetch(`/api/admin/users/${userId}/profile-review`, {
     method: "PATCH",
     body: JSON.stringify(payload),
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
 // Lister toutes les voitures (admin)
-export function getAllCars(token) {
-  return apiFetch("/api/admin/cars", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export function getAllCars() {
+  return apiFetch("/api/admin/cars");
 }
 
 // Créer une voiture (admin)
-export function createCar(token, payload) {
+export function createCar(payload) {
   return apiFetch("/api/admin/cars", {
     method: "POST",
     body: JSON.stringify(payload),
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
 // Mettre à jour une voiture (admin)
-export function updateCar(token, carId, updates) {
+export function updateCar(carId, updates) {
   return apiFetch(`/api/admin/cars/${carId}`, {
     method: "PATCH",
     body: JSON.stringify(updates),
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
 // Récupérer les dépenses d'entretien
-export function getMaintenanceRecords(token, filters = {}) {
+export function getMaintenanceRecords(filters = {}) {
   const params = new URLSearchParams();
 
   Object.entries(filters).forEach(([key, value]) => {
@@ -112,45 +78,31 @@ export function getMaintenanceRecords(token, filters = {}) {
     }
   });
 
-  return apiFetch(`/api/admin/maintenance-records?${params.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  return apiFetch(`/api/admin/maintenance-records?${params.toString()}`);
 }
 
 // Créer un entretien
-export function createMaintenanceRecord(token, data) {
+export function createMaintenanceRecord(data) {
   return apiFetch("/api/admin/maintenance-records", {
     method: "POST",
     body: JSON.stringify(data),
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
 // Supprimer un entretien
-export function deleteMaintenanceRecord(token, recordId) {
+export function deleteMaintenanceRecord(recordId) {
   return apiFetch(`/api/admin/maintenance-records/${recordId}`, {
     method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
 // Récupérer les périodes bloquées d'une voiture
-export function getBlockedPeriods(token, carId) {
-  return apiFetch(`/api/admin/cars/${carId}/blocks`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export function getBlockedPeriods(carId) {
+  return apiFetch(`/api/admin/cars/${carId}/blocks`);
 }
 
 // Récupérer toutes les périodes bloquées (optionnellement filtrées)
-export function getAllBlockedPeriods(token, filters = {}) {
+export function getAllBlockedPeriods(filters = {}) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
@@ -159,35 +111,25 @@ export function getAllBlockedPeriods(token, filters = {}) {
   });
 
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  return apiFetch(`/api/admin/blocks${suffix}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  return apiFetch(`/api/admin/blocks${suffix}`);
 }
 
 // Créer une période bloquée
-export function createBlockedPeriod(token, carId, data) {
+export function createBlockedPeriod(carId, data) {
   return apiFetch(`/api/admin/cars/${carId}/blocks`, {
     method: "POST",
     body: JSON.stringify(data),
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
 // Supprimer une période bloquée
-export function deleteBlockedPeriod(token, blockId) {
+export function deleteBlockedPeriod(blockId) {
   return apiFetch(`/api/admin/blocks/${blockId}`, {
     method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
-export function getFinanceProfitability(token, filters = {}) {
+export function getFinanceProfitability(filters = {}) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
@@ -195,14 +137,10 @@ export function getFinanceProfitability(token, filters = {}) {
     }
   });
 
-  return apiFetch(`/api/admin/finance/profitability?${params.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  return apiFetch(`/api/admin/finance/profitability?${params.toString()}`);
 }
 
-export function getFinanceSummary(token, filters = {}) {
+export function getFinanceSummary(filters = {}) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
@@ -210,28 +148,20 @@ export function getFinanceSummary(token, filters = {}) {
     }
   });
 
-  return apiFetch(`/api/admin/finance/summary?${params.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  return apiFetch(`/api/admin/finance/summary?${params.toString()}`);
 }
 
-export function getFinanceRevenueTimeseries(token, filters = {}) {
+export function getFinanceRevenueTimeseries(filters = {}) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
       params.set(key, value);
     }
   });
-  return apiFetch(`/api/admin/finance/revenue-timeseries?${params.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  return apiFetch(`/api/admin/finance/revenue-timeseries?${params.toString()}`);
 }
 
-export function getFinanceCharges(token, filters = {}) {
+export function getFinanceCharges(filters = {}) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
@@ -239,88 +169,66 @@ export function getFinanceCharges(token, filters = {}) {
     }
   });
 
-  return apiFetch(`/api/admin/finance/charges?${params.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  return apiFetch(`/api/admin/finance/charges?${params.toString()}`);
 }
 
-export function listInvoices(token, filters = {}) {
+export function listInvoices(filters = {}) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") params.set(key, value);
   });
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  return apiFetch(`/api/admin/invoices${suffix}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  return apiFetch(`/api/admin/invoices${suffix}`);
 }
 
-export function createInvoiceForReservation(token, reservationId) {
+export function createInvoiceForReservation(reservationId) {
   return apiFetch(`/api/admin/reservations/${reservationId}/invoice`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
   });
 }
 
-export function listCreditNotes(token, filters = {}) {
+export function listCreditNotes(filters = {}) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") params.set(key, value);
   });
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  return apiFetch(`/api/admin/credit-notes${suffix}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  return apiFetch(`/api/admin/credit-notes${suffix}`);
 }
 
-export function createCreditNoteForReservation(token, reservationId, payload) {
+export function createCreditNoteForReservation(reservationId, payload) {
   return apiFetch(`/api/admin/reservations/${reservationId}/credit-note`, {
     method: "POST",
     body: JSON.stringify(payload),
-    headers: { Authorization: `Bearer ${token}` },
   });
 }
 
-export function createFinanceCharge(token, payload) {
+export function createFinanceCharge(payload) {
   return apiFetch("/api/admin/finance/charges", {
     method: "POST",
     body: JSON.stringify(payload),
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
-export function deleteFinanceCharge(token, chargeId) {
+export function deleteFinanceCharge(chargeId) {
   return apiFetch(`/api/admin/finance/charges/${chargeId}`, {
     method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
-export function updateCarInvestment(token, carId, payload) {
+export function updateCarInvestment(carId, payload) {
   return apiFetch(`/api/admin/finance/cars/${carId}/investment`, {
     method: "PATCH",
     body: JSON.stringify(payload),
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
-export function uploadCarImages(token, files) {
+export function uploadCarImages(files) {
   const formData = new FormData();
   files.forEach((file) => formData.append("images", file));
 
   return apiFetch("/api/admin/cars/upload-images", {
     method: "POST",
     body: formData,
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }

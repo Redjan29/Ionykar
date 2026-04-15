@@ -7,27 +7,16 @@ export function createReservation(payload) {
   });
 }
 
-export function getMyReservations(token) {
-  return apiFetch("/api/reservations/my", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export function getMyReservations() {
+  return apiFetch("/api/reservations/my");
 }
 
-export function getReservationById(token, reservationId) {
-  return apiFetch(`/api/reservations/${reservationId}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export function getReservationById(reservationId) {
+  return apiFetch(`/api/reservations/${reservationId}`);
 }
 
-export function cancelMyReservation(token, reservationId) {
+export function cancelMyReservation(reservationId) {
   return apiFetch(`/api/reservations/my/${reservationId}/cancel`, {
     method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }

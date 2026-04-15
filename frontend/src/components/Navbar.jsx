@@ -1,27 +1,12 @@
 // src/components/Navbar.jsx
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./Navbar.css";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
-export default function Navbar({ authDisabled = false }) {
-  const { currency, setCurrency, language, setLanguage } = useAppContext();
-  const { isAuthenticated, user, logout } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [localeModalOpen, setLocaleModalOpen] = useState(false);
-  const [localeTab, setLocaleTab] = useState("language");
-  const isAdminPage = location.pathname.startsWith("/admin");
-  const logoTarget = user?.isAdmin ? "/admin" : "/";
-
-  const languageLabel = language === "fr" ? "Français" : "English";
-  const currencyLabel = currency === "EUR" ? "Euro (€)" : "Dollar ($)";
-  const languageCode = language === "fr" ? "FR" : "EN";
-  const currencyCode = currency === "EUR" ? "€" : "$";
-
-  const GlobeIcon = () => (
+function GlobeIcon() {
+  return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10Z"
@@ -48,8 +33,10 @@ export default function Navbar({ authDisabled = false }) {
       />
     </svg>
   );
+}
 
-  const CurrencyIcon = () => (
+function CurrencyIcon() {
+  return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M19 7H8.8a4.8 4.8 0 1 0 0 9.6H19"
@@ -65,16 +52,86 @@ export default function Navbar({ authDisabled = false }) {
       />
     </svg>
   );
+}
 
-  const accountTarget = useMemo(() => {
-    if (isAuthenticated) return "/profile";
-    return "/login";
-  }, [isAuthenticated]);
+export default function Navbar({ authDisabled = false }) {
+  const { currency, setCurrency, language, setLanguage } = useAppContext();
+  const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [localeModalOpen, setLocaleModalOpen] = useState(false);
+  const [localeTab, setLocaleTab] = useState("language");
+  const localeTriggerRef = useRef(null);
+  const localeDialogRef = useRef(null);
+  const lastActiveElementRef = useRef(null);
+  const isAdminPage = location.pathname.startsWith("/admin");
+  const logoTarget = user?.isAdmin ? "/admin" : "/";
+
+  const languageLabel = language === "fr" ? "Français" : "English";
+  const currencyLabel = currency === "EUR" ? "Euro (€)" : "Dollar ($)";
+  const languageCode = language === "fr" ? "FR" : "EN";
+  const currencyCode = currency === "EUR" ? "€" : "$";
 
   const handleLogout = () => {
     logout();
     navigate("/");
   };
+
+  const closeLocaleModal = () => {
+    setLocaleModalOpen(false);
+  };
+
+  useEffect(() => {
+    if (!localeModalOpen) return;
+
+    lastActiveElementRef.current = document.activeElement;
+    const dialogEl = localeDialogRef.current;
+    const focusables = dialogEl?.querySelectorAll?.(
+      'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'
+    );
+
+    // focus first interactive element (close button exists)
+    const first = focusables?.[0];
+    if (first && typeof first.focus === "function") first.focus();
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeLocaleModal();
+        return;
+      }
+
+      if (e.key !== "Tab") return;
+      if (!focusables || focusables.length === 0) return;
+
+      const firstEl = focusables[0];
+      const lastEl = focusables[focusables.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        }
+      } else {
+        if (document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [localeModalOpen]);
+
+  useEffect(() => {
+    if (localeModalOpen) return;
+    const el = lastActiveElementRef.current || localeTriggerRef.current;
+    if (el && typeof el.focus === "function") el.focus();
+  }, [localeModalOpen]);
 
   return (
     <header className="navbar">
@@ -106,6 +163,9 @@ export default function Navbar({ authDisabled = false }) {
           className="locale-trigger"
           onClick={() => setLocaleModalOpen(true)}
           aria-label={`${languageLabel} / ${currencyLabel}`}
+          aria-haspopup="dialog"
+          aria-expanded={localeModalOpen}
+          ref={localeTriggerRef}
         >
           <span className="locale-pill" title={languageLabel}>
             <span className="locale-pill-icon">
@@ -189,20 +249,29 @@ export default function Navbar({ authDisabled = false }) {
       {localeModalOpen && (
         <div
           className="locale-modal-overlay"
-          onClick={() => setLocaleModalOpen(false)}
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeLocaleModal();
+          }}
           role="presentation"
         >
-          <div className="locale-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="locale-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={language === "fr" ? "Langue et devise" : "Language and currency"}
+            ref={localeDialogRef}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
               className="locale-modal-close"
-              onClick={() => setLocaleModalOpen(false)}
+              onClick={closeLocaleModal}
               aria-label={language === "fr" ? "Fermer" : "Close"}
             >
               ×
             </button>
 
-            <div className="locale-modal-tabs" role="tablist">
+            <div className="locale-modal-tabs">
               <button
                 type="button"
                 className={`locale-tab ${localeTab === "language" ? "active" : ""}`}

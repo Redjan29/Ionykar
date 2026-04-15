@@ -35,7 +35,7 @@
     <meta name="geo.region" content="FR" />
     <meta name="geo.placename" content="France" />
     
-    <!-- Canonical URL -->
+    <!-- Canonical URL (route-specific canonicals are set in-app) -->
     <link rel="canonical" href="https://www.ionykar.fr" />
 
     <!-- Fonts (Brandbook) -->
@@ -43,118 +43,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Monda:wght@400;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     
-    <!-- Structured Data JSON-LD for SEO -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "LocalBusiness",
-      "name": "IonyKar",
-      "description": "Location de voiture courte et longue durée à Paris 12e (Bastille). Réservation 24h/24 7j/7, paiement sécurisé et documents automatisés.",
-      "url": "https://www.ionykar.fr",
-      "telephone": "+33-6-12-19-30-50",
-      "priceRange": "€€",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Paris",
-        "postalCode": "75012",
-        "addressCountry": "FR"
-      },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": "48.8566",
-        "longitude": "2.3522"
-      },
-      "openingHoursSpecification": {
-        "@type": "OpeningHoursSpecification",
-        "dayOfWeek": [
-          "Monday",
-          "Tuesday",
-          "Wednesday",
-          "Thursday",
-          "Friday",
-          "Saturday",
-          "Sunday"
-        ],
-        "opens": "00:00",
-        "closes": "23:59"
-      },
-      "sameAs": []
-    }
-    </script>
-
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "AutoRental",
-      "name": "IonyKar",
-      "url": "https://www.ionykar.fr",
-      "image": "https://www.ionykar.fr/Logo_2.png",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Paris",
-        "postalCode": "75012",
-        "addressCountry": "FR"
-      },
-      "areaServed": "Paris 12e — Bastille"
-    }
-    </script>
-
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": [
-        {
-          "@type": "Question",
-          "name": "Quel est le prix moyen d'une location de voiture ?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Le prix d'une location varie selon le véhicule et la période. Le tarif affiché est calculé automatiquement pour vos dates."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Quelles sont les conditions pour louer une voiture ?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Pour louer un véhicule, vous devez avoir au minimum 21 ans, être titulaire d'un permis de conduire depuis au moins 3 ans, et fournir les documents demandés lors de la création du compte."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Puis-je annuler ma réservation de location de voiture ?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Oui, l'annulation de votre location de voiture est gratuite jusqu'à 24 heures avant la date de départ prévue. Vous pouvez modifier ou annuler votre réservation depuis votre compte client ou en contactant le support."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "L'assurance est-elle incluse dans le prix de location ?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Oui, les locations incluent une assurance tous risques. Les conditions détaillées figurent dans les CGL."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Où puis-je récupérer ma voiture de location ?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "La récupération se fait depuis nos stations à Paris 12e (Bastille). Les informations de départ sont envoyées automatiquement avant le début de la location."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Le kilométrage est-il limité pour la location ?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Le kilométrage inclus est précisé dans le contrat de location. Les kilomètres supplémentaires peuvent être facturés selon les CGL."
-          }
-        }
-      ]
-    }
-    </script>
+    <!-- Structured data is injected per-route in-app to avoid mismatches -->
   </head>
   <body>
     <div id="root"></div>

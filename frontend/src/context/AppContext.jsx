@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // src/context/AppContext.jsx
 import { createContext, useContext, useState } from "react";
 

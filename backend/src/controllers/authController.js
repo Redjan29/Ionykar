@@ -8,6 +8,21 @@ function generateToken(userId) {
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
+function setAuthCookie(res, token) {
+  const isProduction = process.env.NODE_ENV === "production";
+  res.cookie("auth_token", token, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "strict" : "lax",
+    path: "/",
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+  });
+}
+
+function clearAuthCookie(res) {
+  res.clearCookie("auth_token", { path: "/" });
+}
+
 export async function register(req, res, next) {
   try {
     const {
@@ -75,6 +90,7 @@ export async function register(req, res, next) {
 
     // Génération du token
     const token = generateToken(user._id);
+    setAuthCookie(res, token);
 
     // Réponse sans le mot de passe
     const userResponse = {
@@ -91,7 +107,6 @@ export async function register(req, res, next) {
     res.status(201).json({
       data: {
         user: userResponse,
-        token,
       },
     });
   } catch (error) {
@@ -149,6 +164,7 @@ export async function login(req, res, next) {
 
     // Génération du token
     const token = generateToken(user._id);
+    setAuthCookie(res, token);
 
     // Réponse sans le mot de passe
     const userResponse = {
@@ -165,7 +181,6 @@ export async function login(req, res, next) {
     res.json({
       data: {
         user: userResponse,
-        token,
       },
     });
   } catch (error) {
@@ -233,6 +248,7 @@ export async function activateAccount(req, res, next) {
 
     // Génération du token
     const token = generateToken(user._id);
+    setAuthCookie(res, token);
 
     // Réponse sans le mot de passe
     const userResponse = {
@@ -249,9 +265,17 @@ export async function activateAccount(req, res, next) {
     res.json({
       data: {
         user: userResponse,
-        token,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function logout(req, res, next) {
+  try {
+    clearAuthCookie(res);
+    res.json({ data: { ok: true } });
   } catch (error) {
     next(error);
   }
