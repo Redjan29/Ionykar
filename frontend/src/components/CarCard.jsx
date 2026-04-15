@@ -4,6 +4,7 @@ import "./CarCard.css";
 import { Link } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { FALLBACK_CAR_IMAGE, resolveImageUrl } from "../utils/imageUrl.js";
+import { computeBasePriceForPeriod } from "../utils/rentalPricing.js";
 
 function CarCard({
   _id,
@@ -13,6 +14,8 @@ function CarCard({
   model,
   category,
   pricePerDay,
+  priceWeekday,
+  priceWeekend,
   imageUrl,
   imageUrls = [],
   seats,
@@ -95,15 +98,14 @@ function CarCard({
     const startDate = searchParams?.startDate;
     const endDate = searchParams?.endDate;
     if (!startDate || !endDate) return null;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffMs = end - start;
-    if (!Number.isFinite(diffMs) || diffMs < 0) return null;
-    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
-    if (!Number.isFinite(days) || days < 1) return null;
-    const total = Number(pricePerDay || 0) * days;
-    return { days, total };
-  }, [pricePerDay, searchParams?.endDate, searchParams?.startDate]);
+    return computeBasePriceForPeriod({
+      startDate,
+      endDate,
+      priceWeekday,
+      priceWeekend,
+      fallbackPricePerDay: pricePerDay,
+    });
+  }, [pricePerDay, priceWeekday, priceWeekend, searchParams?.endDate, searchParams?.startDate]);
 
   const includedKmForPeriod = useMemo(() => {
     if (!pricingForPeriod?.days) return null;
@@ -264,14 +266,32 @@ function CarCard({
                     {formatPrice(pricingForPeriod.total)}
                   </div>
                   <div className="car-card-perday">
-                    ({formatPrice(pricePerDay)}
+                    ({formatPrice(pricingForPeriod.avgPerDay || pricePerDay)}
                     {perDayLabel})
+                  </div>
+                  <div className="car-card-subrates">
+                    {language === "fr"
+                      ? `Semaine: ${formatPrice(pricingForPeriod.weekdayRate)} · Week-end: ${formatPrice(
+                          pricingForPeriod.weekendRate
+                        )}`
+                      : `Weekday: ${formatPrice(pricingForPeriod.weekdayRate)} · Weekend: ${formatPrice(
+                          pricingForPeriod.weekendRate
+                        )}`}
                   </div>
                 </>
               ) : (
                 <>
                   <div className="car-card-total">{formatPrice(pricePerDay)}</div>
                   <div className="car-card-perday">{perDayLabel}</div>
+                  <div className="car-card-subrates">
+                    {language === "fr"
+                      ? `Semaine: ${formatPrice(priceWeekday || pricePerDay)} · Week-end: ${formatPrice(
+                          priceWeekend || pricePerDay
+                        )}`
+                      : `Weekday: ${formatPrice(priceWeekday || pricePerDay)} · Weekend: ${formatPrice(
+                          priceWeekend || pricePerDay
+                        )}`}
+                  </div>
                 </>
               )}
             </div>

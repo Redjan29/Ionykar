@@ -23,6 +23,41 @@ function calculateDays(startDate, endDate) {
   return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
 }
 
+function isWeekend(date) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0 Sun ... 6 Sat
+  return day === 0 || day === 6;
+}
+
+function computeTotalPriceWithWeekendRates({ start, end, priceWeekday, priceWeekend, fallbackPricePerDay }) {
+  const weekdayRate = Number(priceWeekday ?? fallbackPricePerDay ?? 0);
+  const weekendRate = Number(priceWeekend ?? fallbackPricePerDay ?? 0);
+  if (!Number.isFinite(weekdayRate) || weekdayRate <= 0) return null;
+  if (!Number.isFinite(weekendRate) || weekendRate <= 0) return null;
+
+  const cursor = new Date(start);
+  cursor.setHours(12, 0, 0, 0);
+  const endD = new Date(end);
+  endD.setHours(12, 0, 0, 0);
+
+  let total = 0;
+  let weekdayDays = 0;
+  let weekendDays = 0;
+
+  while (cursor <= endD) {
+    if (isWeekend(cursor)) {
+      weekendDays += 1;
+      total += weekendRate;
+    } else {
+      weekdayDays += 1;
+      total += weekdayRate;
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return { total, weekdayDays, weekendDays, weekdayRate, weekendRate };
+}
+
 export async function createReservation(req, res, next) {
   let session;
   try {
@@ -161,8 +196,15 @@ export async function createReservation(req, res, next) {
             startTime,
             endTime,
             numberOfDays,
-            pricePerDay: car.pricePerDay,
-            totalPrice: numberOfDays * car.pricePerDay,
+            pricePerDay: car.priceWeekday || car.pricePerDay,
+            totalPrice:
+              computeTotalPriceWithWeekendRates({
+                start,
+                end,
+                priceWeekday: car.priceWeekday,
+                priceWeekend: car.priceWeekend,
+                fallbackPricePerDay: car.pricePerDay,
+              })?.total ?? numberOfDays * car.pricePerDay,
             notes,
           },
         ],
@@ -205,7 +247,7 @@ export async function getReservationById(req, res, next) {
 
     const reservation = await Reservation.findById(id)
       .populate("user", "firstName lastName email phone")
-      .populate("car", "brand model category pricePerDay");
+      .populate("car", "brand model category pricePerDay priceWeekday priceWeekend");
 
     if (!reservation) {
       const err = new Error("Reservation not found");
@@ -228,7 +270,7 @@ export async function updateReservation(req, res, next) {
       throw err;
     }
 
-    const reservation = await Reservation.findById(id).populate("car", "pricePerDay");
+    const reservation = await Reservation.findById(id).populate("car", "pricePerDay priceWeekday priceWeekend");
     if (!reservation) {
       const err = new Error("Reservation not found");
       err.status = 404;
@@ -248,7 +290,14 @@ export async function updateReservation(req, res, next) {
       updates.startDate = start;
       updates.endDate = end;
       updates.numberOfDays = numberOfDays;
-      updates.totalPrice = numberOfDays * reservation.car.pricePerDay;
+      updates.totalPrice =
+        computeTotalPriceWithWeekendRates({
+          start,
+          end,
+          priceWeekday: reservation.car.priceWeekday,
+          priceWeekend: reservation.car.priceWeekend,
+          fallbackPricePerDay: reservation.car.pricePerDay,
+        })?.total ?? numberOfDays * reservation.car.pricePerDay;
     }
 
     const updated = await Reservation.findByIdAndUpdate(id, updates, { 

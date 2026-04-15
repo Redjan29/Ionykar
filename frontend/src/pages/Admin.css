@@ -2,7 +2,9 @@
 .admin-layout {
   display: flex;
   min-height: calc(100vh - 60px);
-  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  /* Admin is a light UI even if the site is dark */
+  background: linear-gradient(180deg, rgba(252, 190, 12, 0.08) 0%, #f8fafc 38%, #f1f5f9 100%);
+  color: var(--ik-black);
 }
 
 /* Sidebar */
@@ -48,21 +50,21 @@
   border-left: 3px solid transparent;
   cursor: pointer;
   font-size: 14px;
-  color: #374151;
+  color: rgba(14, 14, 14, 0.78);
   text-align: left;
   transition: all 0.2s;
 }
 
 .admin-nav-item:hover {
-  background: #f9fafb;
-  color: #111827;
+  background: rgba(252, 190, 12, 0.12);
+  color: var(--ik-black);
 }
 
 .admin-nav-item.active {
-  background: #ede9fe;
-  color: #6d28d9;
-  border-left-color: #6d28d9;
-  font-weight: 500;
+  background: rgba(252, 190, 12, 0.22);
+  color: var(--ik-black);
+  border-left-color: var(--ik-yellow);
+  font-weight: 800;
 }
 
 .admin-nav-icon {
@@ -112,27 +114,28 @@
   border-left: 3px solid transparent;
   cursor: pointer;
   font-size: 13px;
-  color: #6b7280;
+  color: rgba(14, 14, 14, 0.62);
   text-align: left;
   transition: all 0.2s;
 }
 
 .admin-nav-subitem:hover {
   background: white;
-  color: #374151;
+  color: var(--ik-black);
 }
 
 .admin-nav-subitem.active {
-  background: #ede9fe;
-  color: #6d28d9;
-  border-left-color: #6d28d9;
-  font-weight: 500;
+  background: rgba(252, 190, 12, 0.22);
+  color: var(--ik-black);
+  border-left-color: var(--ik-yellow);
+  font-weight: 800;
 }
 
 /* Main content */
 .admin-main {
   flex: 1;
   overflow-y: auto;
+  color: var(--ik-black);
 }
 
 .admin-header {
@@ -144,7 +147,7 @@
 .admin-header h1 {
   margin: 0;
   font-size: 24px;
-  color: #111827;
+  color: var(--ik-black);
 }
 
 /* Content */
@@ -158,6 +161,7 @@
   border-radius: 16px;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
   padding: 18px;
+  color: var(--ik-black);
 }
 
 .admin-error {
@@ -175,7 +179,7 @@
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  color: #6b7280;
+  color: rgba(14, 14, 14, 0.66);
 }
 
 .empty-state p {
@@ -205,14 +209,14 @@
 
 .stat-card h3 {
   font-size: 14px;
-  color: #6b7280;
+  color: rgba(14, 14, 14, 0.62);
   margin-bottom: 8px;
 }
 
 .stat-number {
   font-size: 32px;
   font-weight: 700;
-  color: #111827;
+  color: var(--ik-black);
   margin: 0;
 }
 
@@ -250,7 +254,7 @@
 .admin-table td {
   padding: 12px;
   font-size: 14px;
-  color: #0f172a;
+  color: var(--ik-black);
   border-bottom: 1px solid #f1f5f9;
 }
 
@@ -259,7 +263,7 @@
 }
 
 .admin-table small {
-  color: #6b7280;
+  color: rgba(14, 14, 14, 0.62);
   font-size: 12px;
 }
 
@@ -732,12 +736,14 @@
 }
 
 .btn-approve {
-  background: #10b981;
-  color: white;
+  background: var(--ik-yellow);
+  color: var(--ik-black);
+  border: 1px solid rgba(14, 14, 14, 0.14);
+  font-weight: 900;
 }
 
 .btn-approve:hover {
-  background: #059669;
+  background: #e7ad05;
 }
 
 .btn-reject {
@@ -776,21 +782,23 @@
 }
 
 .btn-activate {
-  background: #10b981;
-  color: white;
+  background: var(--ik-yellow);
+  color: var(--ik-black);
+  border: 1px solid rgba(14, 14, 14, 0.14);
+  font-weight: 900;
 }
 
 .btn-activate:hover {
-  background: #059669;
+  background: #e7ad05;
 }
 
 .btn-deactivate {
-  background: #6b7280;
-  color: white;
+  background: #0e0e0e;
+  color: #ffffff;
 }
 
 .btn-deactivate:hover {
-  background: #4b5563;
+  background: #191919;
 }
 
 /* Filter bar */
@@ -1856,6 +1864,7 @@
 .recent-reservations h2 {
   font-size: 20px;
   margin-bottom: 16px;
+  color: var(--ik-black);
 }
 
 /* Responsive */
@@ -2008,6 +2017,8 @@
 .modal-header h2 {
   font-size: 20px;
   margin: 0;
+  color: var(--ik-black);
+  font-family: var(--ik-font-title);
 }
 
 .btn-close {
@@ -2033,6 +2044,7 @@
 
 .modal-body {
   padding: 20px;
+  color: var(--ik-black);
 }
 
 .block-form {
@@ -2045,6 +2057,8 @@
 .block-form h3 {
   margin: 0 0 16px 0;
   font-size: 16px;
+  color: var(--ik-black);
+  font-family: var(--ik-font-title);
 }
 
 .form-row {
@@ -2061,8 +2075,15 @@
 
 .form-group label {
   font-size: 13px;
-  font-weight: 500;
-  color: #374151;
+  font-weight: 800;
+  color: rgba(14, 14, 14, 0.78);
+  font-family: var(--ik-font-title);
+}
+
+.modal-content input,
+.modal-content select,
+.modal-content textarea {
+  color: var(--ik-black);
 }
 
 .form-group input,
@@ -2071,6 +2092,13 @@
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 14px;
+  color: var(--ik-black);
+  background: #ffffff;
+}
+
+.form-group select option {
+  color: var(--ik-black);
+  background: #ffffff;
 }
 
 .form-group input:focus,
@@ -2596,4 +2624,14 @@
   background: linear-gradient(180deg, #facc15, #f59e0b);
   border-radius: 999px;
   border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.finance-chart-canvas {
+  width: 100%;
+  height: 280px;
+  padding: 12px;
+  margin-top: 10px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
 }

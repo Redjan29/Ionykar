@@ -4,6 +4,7 @@ import { activateAccount } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import Toast from "./Toast";
+import { computeBasePriceForPeriod } from "../utils/rentalPricing.js";
 import "./BookingForm.css";
 
 export default function BookingForm({ car, onClose, initialDates, mode = "modal" }) {
@@ -80,9 +81,15 @@ export default function BookingForm({ car, onClose, initialDates, mode = "modal"
     if (diffMs < 0) {
       dateError = "La date de fin doit être après la date de début.";
     } else {
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1; // min 1 jour
-      days = diffDays;
-      basePrice = diffDays * car.pricePerDay;
+      const computed = computeBasePriceForPeriod({
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        priceWeekday: car?.priceWeekday,
+        priceWeekend: car?.priceWeekend,
+        fallbackPricePerDay: car?.pricePerDay,
+      });
+      days = computed?.days || null;
+      basePrice = computed?.total || null;
     }
 
     // Vérification date d'expiration du permis (pour non connectés)

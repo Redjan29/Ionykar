@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { fetchCarById } from "../api/cars";
 import { FALLBACK_CAR_IMAGE, resolveImageUrl } from "../utils/imageUrl.js";
 import { useAppContext } from "../context/AppContext.jsx";
+import { computeBasePriceForPeriod } from "../utils/rentalPricing.js";
 import "./CarDetailsModal.css";
 
 export default function CarDetailsModal({ carId, initialDates, onClose }) {
@@ -29,16 +30,15 @@ export default function CarDetailsModal({ carId, initialDates, onClose }) {
   const pricingForPeriod = useMemo(() => {
     const startDate = initialDates?.startDate;
     const endDate = initialDates?.endDate;
-    if (!startDate || !endDate || !car?.pricePerDay) return null;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffMs = end - start;
-    if (!Number.isFinite(diffMs) || diffMs < 0) return null;
-    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
-    if (!Number.isFinite(days) || days < 1) return null;
-    const total = Number(car.pricePerDay || 0) * days;
-    return { days, total };
-  }, [car?.pricePerDay, initialDates?.endDate, initialDates?.startDate]);
+    if (!startDate || !endDate) return null;
+    return computeBasePriceForPeriod({
+      startDate,
+      endDate,
+      priceWeekday: car?.priceWeekday,
+      priceWeekend: car?.priceWeekend,
+      fallbackPricePerDay: car?.pricePerDay,
+    });
+  }, [car?.pricePerDay, car?.priceWeekday, car?.priceWeekend, initialDates?.endDate, initialDates?.startDate]);
 
   const hasSelectedDates = Boolean(initialDates?.startDate && initialDates?.endDate);
 
@@ -253,13 +253,27 @@ export default function CarDetailsModal({ carId, initialDates, onClose }) {
                       <>
                         <div className="ik-price-total">{formatPrice(pricingForPeriod.total)}</div>
                         <div className="ik-price-sub">
-                          {formatPrice(car.pricePerDay)} {language === "fr" ? "/ jour" : "/ day"}
+                          {language === "fr"
+                            ? `Semaine ${formatPrice(pricingForPeriod.weekdayRate)} /j · Week-end ${formatPrice(
+                                pricingForPeriod.weekendRate
+                              )} /j`
+                            : `Weekday ${formatPrice(pricingForPeriod.weekdayRate)}/day · Weekend ${formatPrice(
+                                pricingForPeriod.weekendRate
+                              )}/day`}
                         </div>
                       </>
                     ) : (
                       <>
                         <div className="ik-price-total">{formatPrice(car.pricePerDay)}</div>
-                        <div className="ik-price-sub">{language === "fr" ? "/ jour" : "/ day"}</div>
+                        <div className="ik-price-sub">
+                          {language === "fr"
+                            ? `Semaine ${formatPrice(car.priceWeekday || car.pricePerDay)} /j · Week-end ${formatPrice(
+                                car.priceWeekend || car.pricePerDay
+                              )} /j`
+                            : `Weekday ${formatPrice(car.priceWeekday || car.pricePerDay)}/day · Weekend ${formatPrice(
+                                car.priceWeekend || car.pricePerDay
+                              )}/day`}
+                        </div>
                       </>
                     )}
                     <button

@@ -52,6 +52,17 @@ const carSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    // New pricing model: weekday vs weekend
+    priceWeekday: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    priceWeekend: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
     purchasePrice: {
       type: Number,
       default: 0,

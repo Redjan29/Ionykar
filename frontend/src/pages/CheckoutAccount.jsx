@@ -6,6 +6,7 @@ import { fetchCarById } from "../api/cars.js";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { FALLBACK_CAR_IMAGE, resolveImageUrl } from "../utils/imageUrl.js";
+import { computeBasePriceForPeriod } from "../utils/rentalPricing.js";
 import "./CheckoutAccount.css";
 
 export default function CheckoutAccount() {
@@ -79,15 +80,15 @@ export default function CheckoutAccount() {
   const hasRequiredConsents = Boolean(consents.cgl && consents.privacy);
 
   const periodPricing = useMemo(() => {
-    if (!car?.pricePerDay || !hasDates) return null;
-    const start = new Date(initialDates.startDate);
-    const end = new Date(initialDates.endDate);
-    const diffMs = end - start;
-    if (!Number.isFinite(diffMs) || diffMs < 0) return null;
-    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
-    if (!Number.isFinite(days) || days < 1) return null;
-    return { days, total: days * Number(car.pricePerDay || 0) };
-  }, [car?.pricePerDay, hasDates, initialDates.endDate, initialDates.startDate]);
+    if (!hasDates) return null;
+    return computeBasePriceForPeriod({
+      startDate: initialDates.startDate,
+      endDate: initialDates.endDate,
+      priceWeekday: car?.priceWeekday,
+      priceWeekend: car?.priceWeekend,
+      fallbackPricePerDay: car?.pricePerDay,
+    });
+  }, [car?.pricePerDay, car?.priceWeekday, car?.priceWeekend, hasDates, initialDates.endDate, initialDates.startDate]);
 
   const computeIncludedKm = (days) => {
     const d = Math.max(0, Number(days || 0));

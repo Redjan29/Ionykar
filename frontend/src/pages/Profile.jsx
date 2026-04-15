@@ -15,7 +15,7 @@ import Toast from "../components/Toast";
 import "./Profile.css";
 
 export default function Profile() {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, user } = useAuth();
   const navigate = useNavigate();
   const { toasts, hideToast, success, error } = useToast();
 
@@ -40,6 +40,7 @@ export default function Profile() {
   });
 
   const [licenseWarning, setLicenseWarning] = useState("");
+  const isAdmin = Boolean(user?.isAdmin);
   const [fileNames, setFileNames] = useState({
     profilePhoto: "",
     driverLicensePhoto: "",
@@ -60,9 +61,10 @@ export default function Profile() {
   }, [isAuthenticated]);
 
   const hasPendingDocs = useMemo(() => {
+    if (isAdmin) return false;
     const docTypes = ["driverLicensePhoto", "proofOfResidence"];
     return docTypes.some((t) => String(kyc?.[t]?.status || "").toUpperCase() === "PENDING");
-  }, [kyc]);
+  }, [isAdmin, kyc]);
 
   useEffect(() => {
     if (!isAuthenticated) return undefined;
@@ -267,66 +269,78 @@ export default function Profile() {
             Gérez vos informations personnelles
           </p>
           <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
-            <button
-              type="button"
-              className="btn-save"
-              style={{ width: "auto", padding: "10px 14px", boxShadow: "none" }}
-              onClick={loadProfile}
-            >
-              Rafraîchir le statut des documents
-            </button>
+            {!isAdmin ? (
+              <button
+                type="button"
+                className="btn-save"
+                style={{ width: "auto", padding: "10px 14px", boxShadow: "none" }}
+                onClick={loadProfile}
+              >
+                Rafraîchir le statut des documents
+              </button>
+            ) : (
+              <div className="profile-note" style={{ margin: 0 }}>
+                <p style={{ margin: 0 }}>
+                  Compte administrateur: la partie client (documents KYC, réservations, factures) est masquée.
+                </p>
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="profile-form">
-            {/* Photo de profil */}
-            <section className="profile-section">
-              <h2>Photo de profil</h2>
-              <div className="form-group">
-                <label htmlFor="profilePhoto">Importer une photo de profil</label>
-                <div
-                  style={{
-                    marginBottom: 8,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: statusColor(docMeta("profilePhoto").status),
-                  }}
-                >
-                  Statut: {kycStatusLabel(docMeta("profilePhoto").status)}
-                </div>
-                {docMeta("profilePhoto").status === "APPROVED" ? null : (
-                  <input
-                    type="file"
-                    id="profilePhoto"
-                    name="profilePhoto"
-                    accept="image/*"
-                    onChange={(event) => handleFileChange(event, "profilePhoto")}
-                  />
-                )}
-                {fileNames.profilePhoto && (
-                  <small className="form-hint">Fichier: {fileNames.profilePhoto}</small>
-                )}
-                {getImagePreview(formData.profilePhoto) && (
-                  <img
-                    className="file-preview-image"
-                    src={getImagePreview(formData.profilePhoto)}
-                    alt="Aperçu photo de profil"
-                  />
-                )}
-                {!getImagePreview(formData.profilePhoto) && getFileUrl(formData.profilePhoto) ? (
-                  <a
-                    href={getFileUrl(formData.profilePhoto)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="profile-doc-link"
-                  >
-                    Voir le document
-                  </a>
-                ) : null}
-                <small className="form-hint">
-                  Sélectionnez une image depuis votre téléphone ou ordinateur (optionnel)
-                </small>
-              </div>
-            </section>
+            {!isAdmin ? (
+              <>
+                {/* Photo de profil */}
+                <section className="profile-section">
+                  <h2>Photo de profil</h2>
+                  <div className="form-group">
+                    <label htmlFor="profilePhoto">Importer une photo de profil</label>
+                    <div
+                      style={{
+                        marginBottom: 8,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: statusColor(docMeta("profilePhoto").status),
+                      }}
+                    >
+                      Statut: {kycStatusLabel(docMeta("profilePhoto").status)}
+                    </div>
+                    {docMeta("profilePhoto").status === "APPROVED" ? null : (
+                      <input
+                        type="file"
+                        id="profilePhoto"
+                        name="profilePhoto"
+                        accept="image/*"
+                        onChange={(event) => handleFileChange(event, "profilePhoto")}
+                      />
+                    )}
+                    {fileNames.profilePhoto && (
+                      <small className="form-hint">Fichier: {fileNames.profilePhoto}</small>
+                    )}
+                    {getImagePreview(formData.profilePhoto) && (
+                      <img
+                        className="file-preview-image"
+                        src={getImagePreview(formData.profilePhoto)}
+                        alt="Aperçu photo de profil"
+                      />
+                    )}
+                    {!getImagePreview(formData.profilePhoto) && getFileUrl(formData.profilePhoto) ? (
+                      <a
+                        href={getFileUrl(formData.profilePhoto)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="profile-doc-link"
+                      >
+                        Voir le document
+                      </a>
+                    ) : null}
+                    <small className="form-hint">
+                      Sélectionnez une image depuis votre téléphone ou ordinateur (optionnel)
+                    </small>
+                  </div>
+                </section>
+              </>
+            ) : null}
 
             {/* Coordonnées */}
             <section className="profile-section">
@@ -396,7 +410,7 @@ export default function Profile() {
 
             {/* Permis de conduire */}
             <section className="profile-section">
-              <h2>Permis de conduire</h2>
+              <h2>{isAdmin ? "Informations (admin)" : "Permis de conduire"}</h2>
               <div className="form-group">
                 <label htmlFor="licenseNumber">Numéro de permis</label>
                 <input
@@ -436,54 +450,57 @@ export default function Profile() {
                 </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="driverLicensePhoto">
-                  Photo du permis de conduire
-                </label>
-                <div style={{ marginBottom: 8, fontSize: 13, fontWeight: 700, color: statusColor(docMeta("driverLicensePhoto").status) }}>
-                  Statut: {kycStatusLabel(docMeta("driverLicensePhoto").status)}
-                </div>
-                {docMeta("driverLicensePhoto").status === "REJECTED" && docMeta("driverLicensePhoto").rejectedReason ? (
-                  <div style={{ marginBottom: 10, color: "#b91c1c", fontWeight: 700 }}>
-                    Raison: {docMeta("driverLicensePhoto").rejectedReason}
+              {!isAdmin ? (
+                <div className="form-group">
+                  <label htmlFor="driverLicensePhoto">
+                    Photo du permis de conduire
+                  </label>
+                  <div style={{ marginBottom: 8, fontSize: 13, fontWeight: 700, color: statusColor(docMeta("driverLicensePhoto").status) }}>
+                    Statut: {kycStatusLabel(docMeta("driverLicensePhoto").status)}
                   </div>
-                ) : null}
-                {docMeta("driverLicensePhoto").status === "APPROVED" ? null : (
-                  <input
-                    type="file"
-                    id="driverLicensePhoto"
-                    name="driverLicensePhoto"
-                    accept="image/*"
-                    onChange={(event) => handleFileChange(event, "driverLicensePhoto")}
-                  />
-                )}
-                {fileNames.driverLicensePhoto && (
-                  <small className="form-hint">Fichier: {fileNames.driverLicensePhoto}</small>
-                )}
-                {getImagePreview(formData.driverLicensePhoto) && (
-                  <img
-                    className="file-preview-image"
-                    src={getImagePreview(formData.driverLicensePhoto)}
-                    alt="Aperçu permis de conduire"
-                  />
-                )}
-                {!getImagePreview(formData.driverLicensePhoto) && getFileUrl(formData.driverLicensePhoto) ? (
-                  <a
-                    href={getFileUrl(formData.driverLicensePhoto)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="profile-doc-link"
-                  >
-                    Voir le document
-                  </a>
-                ) : null}
-                <small className="form-hint">
-                  Ajoutez une photo claire du permis (optionnel)
-                </small>
-              </div>
+                  {docMeta("driverLicensePhoto").status === "REJECTED" && docMeta("driverLicensePhoto").rejectedReason ? (
+                    <div style={{ marginBottom: 10, color: "#b91c1c", fontWeight: 700 }}>
+                      Raison: {docMeta("driverLicensePhoto").rejectedReason}
+                    </div>
+                  ) : null}
+                  {docMeta("driverLicensePhoto").status === "APPROVED" ? null : (
+                    <input
+                      type="file"
+                      id="driverLicensePhoto"
+                      name="driverLicensePhoto"
+                      accept="image/*"
+                      onChange={(event) => handleFileChange(event, "driverLicensePhoto")}
+                    />
+                  )}
+                  {fileNames.driverLicensePhoto && (
+                    <small className="form-hint">Fichier: {fileNames.driverLicensePhoto}</small>
+                  )}
+                  {getImagePreview(formData.driverLicensePhoto) && (
+                    <img
+                      className="file-preview-image"
+                      src={getImagePreview(formData.driverLicensePhoto)}
+                      alt="Aperçu permis de conduire"
+                    />
+                  )}
+                  {!getImagePreview(formData.driverLicensePhoto) && getFileUrl(formData.driverLicensePhoto) ? (
+                    <a
+                      href={getFileUrl(formData.driverLicensePhoto)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="profile-doc-link"
+                    >
+                      Voir le document
+                    </a>
+                  ) : null}
+                  <small className="form-hint">
+                    Ajoutez une photo claire du permis (optionnel)
+                  </small>
+                </div>
+              ) : null}
             </section>
 
             {/* Vérification d'identité */}
+            {!isAdmin ? (
             <section className="profile-section">
               <h2>Vérification d'identité</h2>
               <div className="form-group">
@@ -533,8 +550,10 @@ export default function Profile() {
                 </small>
               </div>
             </section>
+            ) : null}
 
             {/* Documents */}
+            {!isAdmin ? (
             <section className="profile-section">
               <h2>Justificatifs</h2>
               <div className="form-group">
@@ -586,6 +605,7 @@ export default function Profile() {
                 </small>
               </div>
             </section>
+            ) : null}
 
             <div className="profile-actions">
               <button
@@ -597,13 +617,16 @@ export default function Profile() {
               </button>
             </div>
 
-            <div className="profile-note">
-              <p>
-                ℹ️ Pour réserver, vos documents doivent être envoyés et validés
-                manuellement par un administrateur (statut “Validé”).
-              </p>
-            </div>
+            {!isAdmin ? (
+              <div className="profile-note">
+                <p>
+                  ℹ️ Pour réserver, vos documents doivent être envoyés et validés
+                  manuellement par un administrateur (statut “Validé”).
+                </p>
+              </div>
+            ) : null}
 
+            {!isAdmin ? (
             <section className="profile-section" style={{ marginTop: 18 }}>
               <h2>Factures & avoirs</h2>
 
@@ -687,6 +710,7 @@ export default function Profile() {
                 </div>
               </div>
             </section>
+            ) : null}
           </form>
         </div>
       </div>

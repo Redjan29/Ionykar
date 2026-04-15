@@ -140,14 +140,16 @@ export default function Navbar({ authDisabled = false }) {
               </button>
 
               <div className="profile-dropdown">
-                {!isAdminPage && (
+                {!isAdminPage && !user?.isAdmin && (
                   <Link to="/my-reservations" className="profile-dropdown-item">
                     {language === "fr" ? "Mes réservations" : "My reservations"}
                   </Link>
                 )}
-                <Link to="/profile" className="profile-dropdown-item">
-                  {language === "fr" ? "Mon profil" : "My profile"}
-                </Link>
+                {!user?.isAdmin && (
+                  <Link to="/profile" className="profile-dropdown-item">
+                    {language === "fr" ? "Mon profil" : "My profile"}
+                  </Link>
+                )}
                 {user?.isAdmin && !isAdminPage && (
                   <Link to="/admin" className="profile-dropdown-item profile-dropdown-item-admin">
                     {language === "fr" ? "Espace admin" : "Admin area"}

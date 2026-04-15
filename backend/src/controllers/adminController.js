@@ -48,7 +48,9 @@ const FINANCE_CHARGE_CATEGORIES = [
   "PNEUS",
   "CONTROLE_TECHNIQUE",
   "ASSURANCE",
+  "LEASING",
   "PARKING_MENSUEL",
+  "PARKING_FIXE",
   "BOITIER_TELEMATIQUE",
   "AUTRE",
 ];
@@ -1556,6 +1558,8 @@ export async function createCar(req, res, next) {
       model,
       description,
       pricePerDay,
+      priceWeekday,
+      priceWeekend,
       mileage,
       fuel,
       transmission,
@@ -1574,7 +1578,8 @@ export async function createCar(req, res, next) {
     const requiredFields = [
       "brand",
       "model",
-      "pricePerDay",
+      "priceWeekday",
+      "priceWeekend",
       "fuel",
       "transmission",
       "seats",
@@ -1598,15 +1603,32 @@ export async function createCar(req, res, next) {
       throw err;
     }
 
-    const parsedPrice = Number(pricePerDay);
+    const parsedPrice =
+      pricePerDay !== undefined && pricePerDay !== "" ? Number(pricePerDay) : Number(priceWeekday);
+    const parsedWeekday =
+      priceWeekday !== undefined && priceWeekday !== "" ? Number(priceWeekday) : parsedPrice;
+    const parsedWeekend =
+      priceWeekend !== undefined && priceWeekend !== "" ? Number(priceWeekend) : parsedPrice;
     const parsedMileage = mileage !== undefined && mileage !== "" ? Number(mileage) : 0;
     const parsedSeats = Number(seats);
     const parsedDoors = doors !== undefined && doors !== "" ? Number(doors) : 5;
     const parsedLuggage = luggage !== undefined && luggage !== "" ? Number(luggage) : 2;
     const parsedYear = Number(year);
 
+    // pricePerDay is legacy; we compute it from weekday if missing
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-      const err = new Error("pricePerDay must be a positive number");
+      const err = new Error("pricePerDay must be a positive number (or provide priceWeekday)");
+      err.status = 400;
+      throw err;
+    }
+
+    if (!Number.isFinite(parsedWeekday) || parsedWeekday <= 0) {
+      const err = new Error("priceWeekday must be a positive number");
+      err.status = 400;
+      throw err;
+    }
+    if (!Number.isFinite(parsedWeekend) || parsedWeekend <= 0) {
+      const err = new Error("priceWeekend must be a positive number");
       err.status = 400;
       throw err;
     }
@@ -1646,6 +1668,8 @@ export async function createCar(req, res, next) {
       model: String(model).trim(),
       description: description || "",
       pricePerDay: parsedPrice,
+      priceWeekday: parsedWeekday,
+      priceWeekend: parsedWeekend,
       mileage: parsedMileage,
       fuel,
       transmission,
@@ -1984,6 +2008,8 @@ export async function updateCar(req, res, next) {
 
     const allowedFields = [
       "pricePerDay",
+      "priceWeekday",
+      "priceWeekend",
       "description",
       "status",
       "seats",
@@ -2015,6 +2041,22 @@ export async function updateCar(req, res, next) {
       updates.pricePerDay = Number(updates.pricePerDay);
       if (!Number.isFinite(updates.pricePerDay) || updates.pricePerDay <= 0) {
         const err = new Error("pricePerDay must be a positive number");
+        err.status = 400;
+        throw err;
+      }
+    }
+    if (updates.priceWeekday !== undefined) {
+      updates.priceWeekday = Number(updates.priceWeekday);
+      if (!Number.isFinite(updates.priceWeekday) || updates.priceWeekday <= 0) {
+        const err = new Error("priceWeekday must be a positive number");
+        err.status = 400;
+        throw err;
+      }
+    }
+    if (updates.priceWeekend !== undefined) {
+      updates.priceWeekend = Number(updates.priceWeekend);
+      if (!Number.isFinite(updates.priceWeekend) || updates.priceWeekend <= 0) {
+        const err = new Error("priceWeekend must be a positive number");
         err.status = 400;
         throw err;
       }

@@ -1,5 +1,17 @@
 import { Fragment, useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { Bar, Doughnut, Line } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+} from "chart.js";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer.jsx";
 import { useAuth } from "../context/AuthContext";
@@ -31,6 +43,17 @@ import {
   reviewUserProfile,
 } from "../api/admin";
 import "./Admin.css";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend
+);
 
 const FALLBACK_CAR_IMAGE =
   "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='100%25' height='100%25' fill='%23e5e7eb'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-family='Arial' font-size='14'%3ECar%3C/text%3E%3C/svg%3E";
@@ -158,6 +181,7 @@ export default function Admin() {
   const [financeFilters, setFinanceFilters] = useState(() => ({
     year: String(new Date().getFullYear()),
     month: "",
+    carId: "",
   }));
   const [locationsMenuOpen, setLocationsMenuOpen] = useState(true);
   const [fleetMenuOpen, setFleetMenuOpen] = useState(true);
@@ -221,15 +245,18 @@ export default function Admin() {
         const monthNum = financeFilters.month ? Number(financeFilters.month) : "";
         const granularity = monthNum ? "day" : "month";
 
-        const [summaryRes, seriesRes, seriesPrevRes] = await Promise.all([
+        const [carsRes, summaryRes, seriesRes, seriesPrevRes] = await Promise.all([
+          getAllCars(token),
           getFinanceSummary(token, financeFilters),
           getFinanceRevenueTimeseries(token, { ...financeFilters, granularity }),
           getFinanceRevenueTimeseries(token, {
             year: String(Number.isFinite(yearNum) ? yearNum - 1 : new Date().getFullYear() - 1),
             month: financeFilters.month || "",
+            carId: financeFilters.carId || "",
             granularity,
           }),
         ]);
+        setCars(carsRes);
         setFinanceSummary(summaryRes);
         setFinanceRevenueSeries(seriesRes);
         setFinanceRevenueSeriesPrev(seriesPrevRes);
@@ -239,7 +266,7 @@ export default function Admin() {
     } finally {
       setLoading(false);
     }
-  }, [user, token, activeTab, financeFilters.year, financeFilters.month]);
+  }, [user, token, activeTab, financeFilters.year, financeFilters.month, financeFilters.carId]);
 
   // Charger les données initiales
   useEffect(() => {
@@ -270,6 +297,7 @@ export default function Admin() {
       loadData();
     } catch (err) {
       alert(err.message || "Erreur lors de la mise à jour de la voiture");
+      throw err;
     }
   }
 
@@ -554,6 +582,7 @@ export default function Admin() {
                   summary={financeSummary}
                   revenueSeries={financeRevenueSeries}
                   revenueSeriesPrev={financeRevenueSeriesPrev}
+                  cars={cars}
                   financeFilters={financeFilters}
                   onChangeFinanceFilters={setFinanceFilters}
                 />
@@ -633,7 +662,17 @@ function DeparturesReturnsView({ reservations = [] }) {
                 </td>
                 <td>
                   <span className={`status-badge ${String(row.reservation.status || "").toLowerCase()}`}>
-                    {row.reservation.status}
+                    {(() => {
+                      const map = {
+                        PENDING: "En attente",
+                        CONFIRMED: "Confirmée",
+                        ACTIVE: "En cours",
+                        COMPLETED: "Terminée",
+                        CANCELLED: "Annulée",
+                      };
+                      const st = String(row.reservation.status || "").toUpperCase();
+                      return map[st] || row.reservation.status;
+                    })()}
                   </span>
                 </td>
               </tr>
@@ -833,7 +872,7 @@ function ClientDocumentsView({ users = [], token, onRefresh }) {
   const [draftReasons, setDraftReasons] = useState({});
   const [savingKey, setSavingKey] = useState(null);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("PENDING");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [docTypeFilter, setDocTypeFilter] = useState("any");
   const [preview, setPreview] = useState(null);
 
@@ -1332,6 +1371,12 @@ function FinanceChargesView({
     description: "",
   });
 
+  const fixedMonthlyTotal = useMemo(() => {
+    return charges
+      .filter((c) => String(c.frequency || "").toUpperCase() === "MENSUELLE")
+      .reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
+  }, [charges]);
+
   const totals = charges.reduce(
     (accumulator, charge) => {
       accumulator.base += Number(charge.amount) || 0;
@@ -1340,6 +1385,26 @@ function FinanceChargesView({
     },
     { base: 0, computed: 0 }
   );
+
+  async function upsertFixedCharge(carId, category, amount, label) {
+    if (!carId) {
+      alert("Choisis un véhicule.");
+      return;
+    }
+    const a = Number(amount);
+    if (!Number.isFinite(a) || a <= 0) {
+      alert("Montant invalide.");
+      return;
+    }
+    await onCreateCharge({
+      carId,
+      category,
+      amount: a,
+      date: new Date().toISOString().slice(0, 10),
+      frequency: "MENSUELLE",
+      description: label,
+    });
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -1416,6 +1481,103 @@ function FinanceChargesView({
           <p>Impact calculé</p>
           <strong>{formatCurrency(totals.computed)}</strong>
         </article>
+        <article className="maintenance-kpi-card">
+          <p>Frais fixes mensuels (total)</p>
+          <strong>{formatCurrency(fixedMonthlyTotal)}</strong>
+        </article>
+      </section>
+
+      <section className="maintenance-panel" style={{ marginTop: 10 }}>
+        <div className="maintenance-panel-header" style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <h3 style={{ margin: 0 }}>Frais fixes (leasing / assurance / parking)</h3>
+            <p className="maintenance-topbar-subtitle" style={{ marginTop: 6 }}>
+              Ajoute rapidement les charges récurrentes mensuelles par véhicule.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gap: 10 }}>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Véhicule</label>
+              <select
+                value={formData.carId}
+                onChange={(event) => setFormData((previous) => ({ ...previous, carId: event.target.value }))}
+              >
+                <option value="">Sélectionner un véhicule</option>
+                {cars.map((car) => (
+                  <option key={car._id} value={car._id}>
+                    {car.brand} {car.model} ({car.licensePlate})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Leasing mensuel (€)</label>
+              <div style={{ display: "flex", gap: 10 }}>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Ex: 450"
+                  value={formData.__leasing || ""}
+                  onChange={(e) => setFormData((p) => ({ ...p, __leasing: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  className="btn-approve"
+                  onClick={() => upsertFixedCharge(formData.carId, "LEASING", formData.__leasing, "Leasing mensuel")}
+                >
+                  Ajouter
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>Assurance mensuelle (€)</label>
+              <div style={{ display: "flex", gap: 10 }}>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Ex: 120"
+                  value={formData.__insurance || ""}
+                  onChange={(e) => setFormData((p) => ({ ...p, __insurance: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  className="btn-approve"
+                  onClick={() => upsertFixedCharge(formData.carId, "ASSURANCE", formData.__insurance, "Assurance mensuelle")}
+                >
+                  Ajouter
+                </button>
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Parking fixe (€)</label>
+              <div style={{ display: "flex", gap: 10 }}>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Ex: 80"
+                  value={formData.__parking || ""}
+                  onChange={(e) => setFormData((p) => ({ ...p, __parking: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  className="btn-approve"
+                  onClick={() => upsertFixedCharge(formData.carId, "PARKING_FIXE", formData.__parking, "Parking fixe")}
+                >
+                  Ajouter
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="maintenance-panel">
@@ -1505,7 +1667,9 @@ function FinanceChargesView({
                     <option value="PNEUS">Pneus</option>
                     <option value="CONTROLE_TECHNIQUE">Contrôle technique</option>
                     <option value="ASSURANCE">Assurance</option>
+                    <option value="LEASING">Leasing</option>
                     <option value="PARKING_MENSUEL">Parking mensuel</option>
+                    <option value="PARKING_FIXE">Parking (fixe)</option>
                     <option value="BOITIER_TELEMATIQUE">Boîtier / télématique</option>
                     <option value="AUTRE">Autre</option>
                   </select>
@@ -1572,7 +1736,7 @@ function FinanceChargesView({
   );
 }
 
-function FinanceSummaryView({ summary, revenueSeries, revenueSeriesPrev, financeFilters, onChangeFinanceFilters }) {
+function FinanceSummaryView({ summary, revenueSeries, revenueSeriesPrev, cars = [], financeFilters, onChangeFinanceFilters }) {
   if (!summary) {
     return (
       <div className="empty-state">
@@ -1588,6 +1752,7 @@ function FinanceSummaryView({ summary, revenueSeries, revenueSeriesPrev, finance
   const currentPaidRevenue = points.reduce((acc, p) => acc + (Number(p.revenue || 0) || 0), 0);
   const prevPaidRevenue = prevPoints.reduce((acc, p) => acc + (Number(p.revenue || 0) || 0), 0);
   const deltaPct = prevPaidRevenue > 0 ? ((currentPaidRevenue - prevPaidRevenue) / prevPaidRevenue) * 100 : null;
+  const [chartView, setChartView] = useState("CA_BAR"); // CA_BAR | CA_LINE | CHARGES_PIE
 
   function downloadCsv() {
     const rows = [
@@ -1622,12 +1787,78 @@ function FinanceSummaryView({ summary, revenueSeries, revenueSeriesPrev, finance
     { label: "Bénéfice net", value: Math.max(0, totals.netProfit || 0), color: "#16a34a" },
   ];
 
+  const caLabels = points.map((p) => {
+    if (!p.date) return "";
+    const d = new Date(p.date);
+    const monthSelected = Boolean(financeFilters?.month);
+    return monthSelected
+      ? d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })
+      : d.toLocaleDateString("fr-FR", { month: "short" });
+  });
+  const caValues = points.map((p) => Number(p.revenue || 0));
+
+  const chartCommonOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: true },
+    },
+    scales: {
+      x: { ticks: { color: "#0e0e0e", font: { weight: "700" } }, grid: { display: false } },
+      y: { ticks: { color: "#0e0e0e", font: { weight: "700" } }, grid: { color: "rgba(14,14,14,0.08)" } },
+    },
+  };
+
+  const chargesPieItems = Array.isArray(summary.manualChargesByCategory)
+    ? summary.manualChargesByCategory
+        .map((i) => ({
+          label: formatFinanceChargeCategory(i.category),
+          value: Number(i.totalAmountComputed || 0),
+        }))
+        .filter((x) => x.value > 0)
+    : [];
+
+  const chargesPieData = {
+    labels: chargesPieItems.map((i) => i.label),
+    datasets: [
+      {
+        data: chargesPieItems.map((i) => i.value),
+        backgroundColor: ["#0e0e0e", "#fcbe0c", "#64748b", "#ef4444", "#22c55e", "#3b82f6", "#a855f7"],
+        borderColor: "rgba(14,14,14,0.08)",
+        borderWidth: 1,
+      },
+    ],
+  };
+
   return (
     <div className="dashboard-view">
       <FinancePeriodFilterBar
         financeFilters={financeFilters}
         onChangeFinanceFilters={onChangeFinanceFilters}
       />
+
+      <div className="filter-bar maintenance-filter-bar fleetee-filter-bar" style={{ marginTop: -18, marginBottom: 0 }}>
+        <label>
+          Véhicule
+          <select
+            value={financeFilters?.carId || ""}
+            onChange={(e) =>
+              onChangeFinanceFilters((prev) => ({
+                ...prev,
+                carId: e.target.value,
+              }))
+            }
+          >
+            <option value="">Tous les véhicules</option>
+            {cars.map((car) => (
+              <option key={car._id} value={car._id}>
+                {car.brand} {car.model} ({car.licensePlate})
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <div className="stats-grid">
         <div className="stat-card">
@@ -1652,31 +1883,101 @@ function FinanceSummaryView({ summary, revenueSeries, revenueSeriesPrev, finance
 
       <div className="recent-reservations" style={{ marginTop: 14 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <h2 style={{ margin: 0 }}>Évolution du CA (encaissé)</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <h2 style={{ margin: 0 }}>
+              {chartView === "CHARGES_PIE" ? "Répartition des charges (période)" : "Évolution du CA (encaissé)"}
+            </h2>
+            <select
+              value={chartView}
+              onChange={(e) => setChartView(e.target.value)}
+              style={{ height: 38, borderRadius: 12, border: "1px solid #e5e7eb", padding: "0 12px", fontWeight: 900 }}
+            >
+              <option value="CA_BAR">Graphique CA — Barres</option>
+              <option value="CA_LINE">Graphique CA — Courbe</option>
+              <option value="CHARGES_PIE">Graphique Charges — Camembert</option>
+            </select>
+          </div>
           <button type="button" className="btn-approve" onClick={downloadCsv}>
             Export CSV / Excel
           </button>
         </div>
-        {points.length === 0 ? (
-          <div className="empty-state">
-            <p>Aucune donnée de CA sur la période (uniquement les réservations payées).</p>
-          </div>
-        ) : (
-          <div className="finance-chart">
-            {points.map((p) => {
-              const revenue = Number(p.revenue || 0);
-              const h = Math.max(4, Math.round((revenue / maxRevenue) * 120));
-              const label = p.date
-                ? new Date(p.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })
-                : "";
+        <div className="finance-chart-canvas">
+          {(() => {
+            if (chartView === "CHARGES_PIE") {
+              if (chargesPieItems.length === 0) {
+                return (
+                  <div className="empty-state" style={{ margin: 0 }}>
+                    <p>Aucune charge à afficher sur la période.</p>
+                  </div>
+                );
+              }
               return (
-                <div key={String(p.date)} className="finance-bar" title={`${label} — ${formatCurrency(revenue)}`}>
-                  <div className="finance-bar-inner" style={{ height: h }} />
+                <Doughnut
+                  data={chargesPieData}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { display: true, labels: { color: "#0e0e0e", font: { weight: "700" } } },
+                    },
+                  }}
+                />
+              );
+            }
+
+            if (points.length === 0) {
+              return (
+                <div className="empty-state" style={{ margin: 0 }}>
+                  <p>Aucune donnée de CA sur la période (uniquement les réservations payées).</p>
                 </div>
               );
-            })}
-          </div>
-        )}
+            }
+
+            if (chartView === "CA_LINE") {
+              return (
+                <Line
+                  data={{
+                    labels: caLabels,
+                    datasets: [
+                      {
+                        label: "CA encaissé",
+                        data: caValues,
+                        borderColor: "#0e0e0e",
+                        backgroundColor: "rgba(252,190,12,0.35)",
+                        tension: 0.35,
+                        pointRadius: 2,
+                      },
+                    ],
+                  }}
+                  options={chartCommonOptions}
+                />
+              );
+            }
+
+            return (
+              <Bar
+                data={{
+                  labels: caLabels,
+                  datasets: [
+                    {
+                      label: "CA encaissé",
+                      data: caValues,
+                      backgroundColor: "rgba(252,190,12,0.85)",
+                      borderColor: "rgba(14,14,14,0.18)",
+                      borderWidth: 1,
+                      borderRadius: 10,
+                      barThickness: 22,
+                    },
+                  ],
+                }}
+                options={{
+                  ...chartCommonOptions,
+                  plugins: { ...chartCommonOptions.plugins, legend: { display: false } },
+                }}
+              />
+            );
+          })()}
+        </div>
       </div>
 
       <div className="recent-reservations">
@@ -1756,6 +2057,8 @@ function formatFinanceChargeCategory(category) {
     CONTROLE_TECHNIQUE: "Contrôle technique",
     ASSURANCE: "Assurance",
     PARKING_MENSUEL: "Parking mensuel",
+    PARKING_FIXE: "Parking (fixe)",
+    LEASING: "Leasing",
     BOITIER_TELEMATIQUE: "Boîtier / télématique",
     AUTRE: "Autre",
   };
@@ -1775,6 +2078,16 @@ function DashboardView({ stats }) {
   const recentReservations = Array.isArray(stats.recent) ? stats.recent : [];
   const pending = byStatus.find((s) => s?._id === "PENDING");
   const confirmed = byStatus.find((s) => s?._id === "CONFIRMED");
+  const statusLabel = (status) => {
+    const map = {
+      PENDING: "En attente",
+      CONFIRMED: "Confirmée",
+      ACTIVE: "En cours",
+      COMPLETED: "Terminée",
+      CANCELLED: "Annulée",
+    };
+    return map[String(status || "").toUpperCase()] || String(status || "—");
+  };
 
   return (
     <div className="dashboard-view">
@@ -1853,7 +2166,7 @@ function DashboardView({ stats }) {
                 </td>
                 <td>
                   <span className={`status-badge ${res.status.toLowerCase()}`}>
-                    {res.status}
+                    {statusLabel(res.status)}
                   </span>
                 </td>
                 <td>{res.totalPrice}€</td>
@@ -2322,6 +2635,17 @@ function ReservationsView({ reservations = [], onUpdateStatus }) {
   const [filterStatus, setFilterStatus] = useState("");
   const now = new Date();
 
+  const statusLabel = (status) => {
+    const map = {
+      PENDING: "En attente",
+      CONFIRMED: "Confirmée",
+      ACTIVE: "En cours",
+      COMPLETED: "Terminée",
+      CANCELLED: "Annulée",
+    };
+    return map[String(status || "").toUpperCase()] || String(status || "—");
+  };
+
   function canStartReservation(reservation) {
     if (reservation.status !== "CONFIRMED") {
       return { canStart: false, reason: "La réservation doit être CONFIRMED." };
@@ -2408,7 +2732,7 @@ function ReservationsView({ reservations = [], onUpdateStatus }) {
               </td>
               <td>
                 <span className={`status-badge ${res.status.toLowerCase()}`}>
-                  {res.status}
+                  {statusLabel(res.status)}
                 </span>
               </td>
               <td>{res.totalPrice}€</td>
@@ -2660,7 +2984,7 @@ function ClientProfileModal({ open, user, token, onClose, onRefresh }) {
 function UsersView({ users = [], onToggleActive }) {
   const { token } = useAuth();
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("PENDING");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
@@ -2944,6 +3268,8 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
     licensePlate: "",
     category: "CITADINE",
     pricePerDay: "",
+    priceWeekday: "",
+    priceWeekend: "",
     description: "",
     status: "DISPONIBLE",
     seats: "",
@@ -2957,6 +3283,8 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
     model: "",
     description: "",
     pricePerDay: "",
+    priceWeekday: "",
+    priceWeekend: "",
     mileage: "0",
     fuel: "Essence",
     transmission: "Manuel",
@@ -2991,11 +3319,22 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
   );
 
   const handleStartEdit = (car) => {
+    const fallbackPrice = Number(car.pricePerDay || 0);
+    const weekday = Number(car.priceWeekday || 0) > 0 ? Number(car.priceWeekday) : fallbackPrice;
+    const weekend = Number(car.priceWeekend || 0) > 0 ? Number(car.priceWeekend) : fallbackPrice;
     setEditingCarId(car._id);
     setFormData({
       licensePlate: car.licensePlate ?? "",
       category: car.category ?? "CITADINE",
       pricePerDay: String(car.pricePerDay ?? ""),
+      priceWeekday: weekday ? String(weekday) : "",
+      priceWeekend: weekend ? String(weekend) : "",
+      year: String(car.year ?? ""),
+      brand: car.brand ?? "",
+      model: car.model ?? "",
+      mileage: String(car.mileage ?? ""),
+      doors: String(car.doors ?? ""),
+      color: car.color ?? "",
       description: car.description ?? "",
       status: car.status ?? "DISPONIBLE",
       seats: String(car.seats ?? ""),
@@ -3015,20 +3354,43 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
       return;
     }
 
-    await onUpdateCar(editingCarId, {
-      licensePlate: formData.licensePlate.trim().toUpperCase(),
-      category: formData.category,
-      pricePerDay: Number(formData.pricePerDay),
-      description: formData.description,
-      status: formData.status,
-      seats: Number(formData.seats),
-      luggage: Number(formData.luggage),
-      transmission: formData.transmission,
-      fuel: formData.fuel,
-      imageUrl: formData.imageUrl,
-    });
+    const toOptionalInt = (value) => {
+      if (value === "" || value === undefined || value === null) return undefined;
+      const n = Number.parseInt(String(value), 10);
+      return Number.isFinite(n) ? n : undefined;
+    };
+    const toOptionalNumber = (value) => {
+      if (value === "" || value === undefined || value === null) return undefined;
+      const n = Number(value);
+      return Number.isFinite(n) ? n : undefined;
+    };
 
-    setEditingCarId(null);
+    try {
+      await onUpdateCar(editingCarId, {
+        brand: formData.brand?.trim(),
+        model: formData.model?.trim(),
+        licensePlate: formData.licensePlate.trim().toUpperCase(),
+        category: formData.category,
+        // keep legacy pricePerDay aligned for older screens
+        pricePerDay: Number(formData.priceWeekday || formData.pricePerDay),
+        priceWeekday: Number(formData.priceWeekday),
+        priceWeekend: Number(formData.priceWeekend),
+        year: toOptionalInt(formData.year),
+        mileage: toOptionalNumber(formData.mileage),
+        doors: toOptionalInt(formData.doors),
+        color: formData.color,
+        description: formData.description,
+        status: formData.status,
+        seats: toOptionalInt(formData.seats),
+        luggage: toOptionalInt(formData.luggage),
+        transmission: formData.transmission,
+        fuel: formData.fuel,
+        imageUrl: formData.imageUrl,
+      });
+      setEditingCarId(null);
+    } catch (err) {
+      // keep edit mode so the user can fix inputs
+    }
   };
 
   const resetCreateForm = () => {
@@ -3037,6 +3399,8 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
       model: "",
       description: "",
       pricePerDay: "",
+      priceWeekday: "",
+      priceWeekend: "",
       mileage: "0",
       fuel: "Essence",
       transmission: "Manuel",
@@ -3077,7 +3441,10 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
         brand: createFormData.brand.trim(),
         model: createFormData.model.trim(),
         description: createFormData.description.trim(),
-        pricePerDay: Number(createFormData.pricePerDay),
+        // keep legacy pricePerDay aligned for older screens
+        pricePerDay: Number(createFormData.priceWeekday),
+        priceWeekday: Number(createFormData.priceWeekday),
+        priceWeekend: Number(createFormData.priceWeekend),
         mileage: Number(createFormData.mileage || 0),
         fuel: createFormData.fuel,
         transmission: createFormData.transmission,
@@ -3260,7 +3627,7 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
               <th>Voiture</th>
               <th>Plaque</th>
               <th>Année</th>
-              <th>Prix/jour</th>
+              <th>Prix</th>
               <th>Statut</th>
               <th>Catégorie</th>
               <th>Actions</th>
@@ -3312,17 +3679,33 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
                   </td>
                   <td>
                     {isEditing ? (
-                      <input
-                        className="admin-input"
-                        type="number"
-                        min="1"
-                        value={formData.pricePerDay}
-                        onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, pricePerDay: e.target.value }))
-                        }
-                      />
+                      <div style={{ display: "grid", gap: 8 }}>
+                        <input
+                          className="admin-input"
+                          type="number"
+                          min="1"
+                          placeholder="Semaine (€/j)"
+                          value={formData.priceWeekday}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, priceWeekday: e.target.value }))
+                          }
+                        />
+                        <input
+                          className="admin-input"
+                          type="number"
+                          min="1"
+                          placeholder="Week-end (€/j)"
+                          value={formData.priceWeekend}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, priceWeekend: e.target.value }))
+                          }
+                        />
+                      </div>
                     ) : (
-                      `${car.pricePerDay}€`
+                      <div style={{ display: "grid", gap: 2 }}>
+                        <div><strong>Semaine:</strong> {Number(car.priceWeekday || car.pricePerDay)}€ /j</div>
+                        <div><strong>Week-end:</strong> {Number(car.priceWeekend || car.pricePerDay)}€ /j</div>
+                      </div>
                     )}
                   </td>
                   <td>
@@ -3367,9 +3750,18 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
                       <>
                         <button className="btn-approve" onClick={async () => {
                           await onUpdateCar(editingCarId, {
+                            brand: formData.brand?.trim(),
+                            model: formData.model?.trim(),
                             licensePlate: formData.licensePlate.trim().toUpperCase(),
                             category: formData.category,
-                            pricePerDay: Number(formData.pricePerDay),
+                            // keep legacy pricePerDay aligned for older screens
+                            pricePerDay: Number(formData.priceWeekday || formData.pricePerDay),
+                            priceWeekday: Number(formData.priceWeekday),
+                            priceWeekend: Number(formData.priceWeekend),
+                            year: formData.year === "" || formData.year === undefined ? undefined : Number(formData.year),
+                            mileage: formData.mileage === "" ? undefined : Number(formData.mileage),
+                            doors: formData.doors === "" ? undefined : Number(formData.doors),
+                            color: formData.color,
                             description: formData.description,
                             status: formData.status,
                             seats: Number(formData.seats),
@@ -3377,7 +3769,6 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
                             transmission: formData.transmission,
                             fuel: formData.fuel,
                             imageUrl: formData.imageUrl,
-                            year: Number(formData.year),
                           });
                           setEditingCarId(null);
                         }}>
@@ -3481,17 +3872,30 @@ function CarsView({ cars = [], onUpdateCar, onCreateCar }) {
                   />
                 </label>
                 <label>
-                  Prix / jour (€) *
+                  Prix semaine (€/jour) *
                   <input
                     className="admin-input"
                     type="number"
                     min="1"
                     step="0.01"
-                    value={createFormData.pricePerDay}
-                    onChange={(e) => setCreateFormData((prev) => ({ ...prev, pricePerDay: e.target.value }))}
+                    value={createFormData.priceWeekday}
+                    onChange={(e) => setCreateFormData((prev) => ({ ...prev, priceWeekday: e.target.value }))}
                     required
                   />
                 </label>
+                <label>
+                  Prix week-end (€/jour) *
+                  <input
+                    className="admin-input"
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    value={createFormData.priceWeekend}
+                    onChange={(e) => setCreateFormData((prev) => ({ ...prev, priceWeekend: e.target.value }))}
+                    required
+                  />
+                </label>
+
                 <label>
                   Kilométrage
                   <input
@@ -3917,7 +4321,10 @@ function VehicleFileCard({ car, token, onUpdateCar, onManageBlocks, onClose }) {
           <span className={`status-badge ${String(car.status).toLowerCase()}`}>
             {car.status}
           </span>
-          <strong>{formatCurrency(car.pricePerDay)} / jour</strong>
+          <strong>
+            {formatCurrency(car.priceWeekday || car.pricePerDay)} /j (semaine) ·{" "}
+            {formatCurrency(car.priceWeekend || car.pricePerDay)} /j (week-end)
+          </strong>
           {onClose && (
             <button className="vehicle-file-close" onClick={onClose}>
               ×
