@@ -1,8 +1,10 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import validator from "validator";
 import { User } from "../models/index.js";
 import { JWT_SECRET, JWT_EXPIRES_IN } from "../config/jwt.js";
+import { sendEmail } from "../services/email.js";
 
 function generateToken(userId) {
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
@@ -21,6 +23,37 @@ function setAuthCookie(res, token) {
 
 function clearAuthCookie(res) {
   res.clearCookie("auth_token", { path: "/" });
+}
+
+function sha256Hex(value) {
+  return crypto.createHash("sha256").update(String(value)).digest("hex");
+}
+
+function getSiteUrl() {
+  const raw = process.env.SITE_URL || process.env.FRONTEND_URL || "http://localhost:5173";
+  return String(raw).replace(/\/+$/, "");
+}
+
+async function sendVerificationEmail({ userEmail, token }) {
+  const siteUrl = getSiteUrl();
+  const verifyUrl = `${siteUrl}/verify-email?token=${encodeURIComponent(token)}`;
+  await sendEmail({
+    to: userEmail,
+    subject: "Confirmez votre adresse email — IonyKar",
+    text: `Bonjour,\n\nPour confirmer votre adresse email, cliquez sur ce lien : ${verifyUrl}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n`,
+    html: `<p>Bonjour,</p><p>Pour confirmer votre adresse email, cliquez sur ce lien :</p><p><a href="${verifyUrl}">${verifyUrl}</a></p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>`,
+  });
+}
+
+async function sendPasswordResetEmail({ userEmail, token }) {
+  const siteUrl = getSiteUrl();
+  const resetUrl = `${siteUrl}/reset-password?token=${encodeURIComponent(token)}`;
+  await sendEmail({
+    to: userEmail,
+    subject: "Réinitialisation de mot de passe — IonyKar",
+    text: `Bonjour,\n\nPour réinitialiser votre mot de passe, cliquez sur ce lien : ${resetUrl}\n\nCe lien expire dans 1 heure.\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n`,
+    html: `<p>Bonjour,</p><p>Pour réinitialiser votre mot de passe, cliquez sur ce lien :</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>Ce lien expire dans 1 heure.</p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>`,
+  });
 }
 
 export async function register(req, res, next) {
@@ -86,11 +119,16 @@ export async function register(req, res, next) {
       address,
       licenseNumber,
       licenseExpiry,
+      emailVerified: false,
     });
 
-    // Génération du token
-    const token = generateToken(user._id);
-    setAuthCookie(res, token);
+    // Email verification token
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    user.emailVerificationTokenHash = sha256Hex(rawToken);
+    user.emailVerificationTokenExpiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24h
+    await user.save();
+
+    await sendVerificationEmail({ userEmail: user.email, token: rawToken });
 
     // Réponse sans le mot de passe
     const userResponse = {
@@ -102,11 +140,13 @@ export async function register(req, res, next) {
       licenseNumber: user.licenseNumber,
       licenseExpiry: user.licenseExpiry,
       isAdmin: user.isAdmin || false,
+      emailVerified: user.emailVerified,
     };
 
     res.status(201).json({
       data: {
         user: userResponse,
+        verificationRequired: true,
       },
     });
   } catch (error) {
@@ -162,6 +202,12 @@ export async function login(req, res, next) {
       throw err;
     }
 
+    if (!user.emailVerified) {
+      const err = new Error("Please verify your email first");
+      err.status = 403;
+      throw err;
+    }
+
     // Génération du token
     const token = generateToken(user._id);
     setAuthCookie(res, token);
@@ -176,6 +222,7 @@ export async function login(req, res, next) {
       licenseNumber: user.licenseNumber,
       licenseExpiry: user.licenseExpiry,
       isAdmin: user.isAdmin || false,
+      emailVerified: user.emailVerified,
     };
 
     res.json({
@@ -244,11 +291,17 @@ export async function activateAccount(req, res, next) {
     // Mise à jour de l'utilisateur
     user.password = hashedPassword;
     user.hasPassword = true;
+    if (!user.emailVerified) {
+      // Keep unverified until they verify through email link.
+    }
     await user.save();
 
-    // Génération du token
-    const token = generateToken(user._id);
-    setAuthCookie(res, token);
+    // keep behavior consistent: still require verification
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    user.emailVerificationTokenHash = sha256Hex(rawToken);
+    user.emailVerificationTokenExpiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
+    await user.save();
+    await sendVerificationEmail({ userEmail: user.email, token: rawToken });
 
     // Réponse sans le mot de passe
     const userResponse = {
@@ -260,13 +313,170 @@ export async function activateAccount(req, res, next) {
       licenseNumber: user.licenseNumber,
       licenseExpiry: user.licenseExpiry,
       isAdmin: user.isAdmin || false,
+      emailVerified: user.emailVerified,
     };
 
     res.json({
       data: {
         user: userResponse,
+        verificationRequired: true,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function verifyEmail(req, res, next) {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      const err = new Error("Token is required");
+      err.status = 400;
+      throw err;
+    }
+
+    const hash = sha256Hex(token);
+    const user = await User.findOne({
+      emailVerificationTokenHash: hash,
+      emailVerificationTokenExpiresAt: { $gt: new Date() },
+    }).select("+emailVerificationTokenHash +emailVerificationTokenExpiresAt");
+
+    if (!user) {
+      const err = new Error("Invalid or expired token");
+      err.status = 400;
+      throw err;
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationTokenHash = undefined;
+    user.emailVerificationTokenExpiresAt = undefined;
+    await user.save();
+
+    const jwtToken = generateToken(user._id);
+    setAuthCookie(res, jwtToken);
+
+    res.json({
+      data: {
+        ok: true,
+        user: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phone: user.phone,
+          licenseNumber: user.licenseNumber,
+          licenseExpiry: user.licenseExpiry,
+          isAdmin: user.isAdmin || false,
+          emailVerified: user.emailVerified,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function resendVerification(req, res, next) {
+  try {
+    const { email } = req.body;
+    if (!email || !validator.isEmail(email)) {
+      const err = new Error("Valid email is required");
+      err.status = 400;
+      throw err;
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() }).select(
+      "+emailVerificationTokenHash +emailVerificationTokenExpiresAt"
+    );
+
+    // Always respond ok (avoid account enumeration)
+    if (!user || user.emailVerified) {
+      return res.json({ data: { ok: true } });
+    }
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    user.emailVerificationTokenHash = sha256Hex(rawToken);
+    user.emailVerificationTokenExpiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
+    await user.save();
+
+    await sendVerificationEmail({ userEmail: user.email, token: rawToken });
+    return res.json({ data: { ok: true } });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function forgotPassword(req, res, next) {
+  try {
+    const { email } = req.body;
+    if (!email || !validator.isEmail(email)) {
+      const err = new Error("Valid email is required");
+      err.status = 400;
+      throw err;
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() }).select(
+      "+passwordResetTokenHash +passwordResetTokenExpiresAt"
+    );
+
+    // Always respond ok (avoid account enumeration)
+    if (!user || !user.emailVerified) {
+      return res.json({ data: { ok: true } });
+    }
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    user.passwordResetTokenHash = sha256Hex(rawToken);
+    user.passwordResetTokenExpiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1h
+    await user.save();
+
+    await sendPasswordResetEmail({ userEmail: user.email, token: rawToken });
+    return res.json({ data: { ok: true } });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function resetPassword(req, res, next) {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) {
+      const err = new Error("Token and password are required");
+      err.status = 400;
+      throw err;
+    }
+    if (password.length < 8) {
+      const err = new Error("Password must be at least 8 characters");
+      err.status = 400;
+      throw err;
+    }
+    if (!/\d/.test(password)) {
+      const err = new Error("Password must contain at least one number");
+      err.status = 400;
+      throw err;
+    }
+
+    const hash = sha256Hex(token);
+    const user = await User.findOne({
+      passwordResetTokenHash: hash,
+      passwordResetTokenExpiresAt: { $gt: new Date() },
+    }).select("+passwordResetTokenHash +passwordResetTokenExpiresAt +password");
+
+    if (!user) {
+      const err = new Error("Invalid or expired token");
+      err.status = 400;
+      throw err;
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    user.password = hashedPassword;
+    user.hasPassword = true;
+    user.passwordResetTokenHash = undefined;
+    user.passwordResetTokenExpiresAt = undefined;
+    await user.save();
+
+    res.json({ data: { ok: true } });
   } catch (error) {
     next(error);
   }

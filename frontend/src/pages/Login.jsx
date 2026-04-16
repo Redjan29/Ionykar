@@ -133,6 +133,12 @@ export default function Login() {
             </button>
           </form>
 
+          <p className="auth-footer" style={{ marginTop: 10 }}>
+            <Link to="/forgot-password">
+              {language === "fr" ? "Mot de passe oublié ?" : "Forgot password?"}
+            </Link>
+          </p>
+
           <p className="auth-footer">
             {language === "fr"
               ? "Pas encore de compte ? "

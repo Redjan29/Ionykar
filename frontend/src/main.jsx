@@ -9,6 +9,9 @@ import Checkout from "./pages/Checkout.jsx";
 import CheckoutAccount from "./pages/CheckoutAccount.jsx";
 import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
+import VerifyEmail from "./pages/VerifyEmail.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import ResetPassword from "./pages/ResetPassword.jsx";
 import Admin from "./pages/Admin.jsx";
 import MyReservations from "./pages/MyReservations.jsx";
 import Profile from "./pages/Profile.jsx";
@@ -36,6 +39,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
               <Route path="/checkout/account" element={<CheckoutAccount />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/my-reservations" element={<MyReservations />} />
               <Route path="/reservation-confirmation" element={<ReservationConfirmation />} />

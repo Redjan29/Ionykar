@@ -102,7 +102,7 @@ export default function Signup() {
 
     try {
       await register(formData);
-      navigate("/");
+      navigate("/login");
     } catch (err) {
       setError(
         err.message ||
@@ -121,6 +121,12 @@ export default function Signup() {
       <div className="auth-page">
         <div className="auth-card">
           <h1>{language === "fr" ? "Inscription" : "Sign up"}</h1>
+
+          <div className="auth-success" style={{ marginBottom: 12 }}>
+            {language === "fr"
+              ? "Après inscription, vous devrez confirmer votre email."
+              : "After signing up, you will need to verify your email."}
+          </div>
 
           {error && <div className="auth-error">{error}</div>}
 

@@ -27,11 +27,8 @@ export function AuthProvider({ children }) {
 
   async function register(userData) {
     const response = await apiRegister(userData);
-    const { user: newUser } = response;
-
-    setUser(newUser);
-
-    return newUser;
+    // Register now requires email verification; do not mark authenticated here.
+    return response;
   }
 
   async function logout() {
